@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+  DocumentRoot /var/www/sub-domains/web.tp2.linux/html/
+  ServerName  web.tp2.linux
+
+  <Directory /var/www/sub-domains/web.tp2.linux/html/>
+    Require all granted
+    AllowOverride All
+    Options FollowSymLinks MultiViews
+
+    <IfModule mod_dav.c>
+      Dav off
+    </IfModule>
+  </Directory>
+</VirtualHost>
