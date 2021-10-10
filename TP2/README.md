@@ -505,20 +505,18 @@ Empty set (0.001 sec)
 - **Déterminer combien de tables ont été crées par NextCloud lors de la finalisation de l'installation**
   - ***Bonus points*** **si la réponse à cette question est automatiquement donnée par une requête SQL**
   ```
-  MariaDB [nextcloud]> USE nextcloud; SHOW TABLES;
-  Database changed
-  +-----------------------------+
-  | Tables_in_nextcloud         |
-  +-----------------------------+
-  | oc_accounts                 |
-  | oc_accounts_data
-  [...]
-  108 rows in set (0.001 sec)
+  MariaDB [(none)]> SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'nextcloud';
+  +----------+
+  | COUNT(*) |
+  +----------+
+  |      108 |
+  +----------+
+  1 row in set (0.001 sec)
   ```
 
 > **Ce tableau devra figurer à la fin du rendu, avec les ? remplacés par la bonne valeur (un seul tableau à la fin). Je vous le remets à chaque fois, à des fins de clarté, pour lister les machines qu'on a à chaque instant du TP.**
 
 | Machine         | IP            | Service                 | Port ouvert | IP autorisées |
 |-----------------|---------------|-------------------------|-------------|---------------|
-| `web.tp2.linux` | `10.102.1.11` | Serveur Web             | 80          | 10.102.1.0/24   |
+| `web.tp2.linux` | `10.102.1.11` | Serveur Web             | 80          | 10.102.1.0/24 |
 | `db.tp2.linux`  | `10.102.1.12` | Serveur Base de Données | 3306        | 10.102.1.11   |
