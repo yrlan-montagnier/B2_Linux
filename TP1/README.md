@@ -1,4 +1,3 @@
-
 # TP1 Linux - B2B - MONTAGNIER Yrlan
 
 ## **0. Préparation des VM**
@@ -80,7 +79,7 @@ ONBOOT=yes
 
 #### **Vous n'utilisez QUE ssh pour administrer les machines**
 
-![](/img/SSH.png)
+![](./img/SSH.png)
 
 #### **Les machines doivent avoir un nom**
 -  `sudo nano /etc/hostname` => Remplacer par `node1.tp1.b2` // `node2.tp1.b2`
@@ -97,7 +96,7 @@ node2.tp1.b2
 - `sudo nano /etc/resolv.conf` => On enlève les lignes nameserver et on remplace par **nameserver 1.1.1.1**
 - Vérifier avec le bon fonctionnement avec la commande dig
 
-`dig ynov.com` ===> ![](/img/YnovDIG.png)
+`dig ynov.com` ===> ![](./img/YnovDIG.png)
 
 
 #### **Les machines doivent pouvoir se joindre par leurs noms respectifs**
@@ -224,7 +223,7 @@ Last login: Wed Sep 22 19:09:17 2021 from 10.101.1.1
 
 ## **II. Partitionnement**
 ### **1. Préparation de la VM**
-![](/img/Disques.png)
+![](./img/Disques.png)
 
 ### **2. Partitionnement**
 ##### **🌞 Utilisez LVM pour :**
@@ -457,7 +456,7 @@ Sep 23 02:23:35 node1.tp1.b2 systemd[1]: Started Very simple web service.
 </body>
 </html>
 ```
-[](/img/web.service.png)
+![](./img/web.service.png)
 
 #### **B. Modification de l'unité**
 - **🌞 Créer un utilisateur `web`.**
@@ -517,4 +516,4 @@ Le fichier est maintenant disponible dans `/srv/tp1` à l'adresse http://10.101.
 </body>
 </html>
 ```
-[](/img/web.service_end.png)
+![](./img/web.service_end.png)
