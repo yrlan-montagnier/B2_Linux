@@ -405,8 +405,7 @@ public (active)
 
 ```SQL
 [yrlan@db ~]$ sudo mysql -u root -p
-# Création d'un utilisateur dans la base, avec un mot de passe
-# L'adresse IP correspond à l'adresse IP depuis laquelle viendra les connexions. Cela permet de restreindre les IPs autorisées à se connecter.
+
 # Dans notre cas, c'est l'IP de web.tp2.linux
 # "db_pwd" c'est le mot de passe :D
 CREATE USER 'nextcloud'@'10.102.1.11' IDENTIFIED BY 'db_pwd';
@@ -453,6 +452,20 @@ Empty set (0.001 sec)
 ```
 
 - **Trouver une commande qui permet de lister tous les utilisateurs de la base de données**
+  ```sql
+  MariaDB [(none)]> GRANT ALL PRIVILEGES ON mysql.* TO 'nextcloud'@'10.102.1.11';
+
+  MariaDB [(none)]> SELECT user,host FROM mysql.user;
+  +-----------+-------------+
+  | user      | host        |
+  +-----------+-------------+
+  | nextcloud | 10.102.1.11 |
+  | root      | 127.0.0.1   |
+  | root      | ::1         |
+  | root      | localhost   |
+  +-----------+-------------+
+  4 rows in set (0.001 sec)
+  ```
 
 ### **C. Finaliser l'installation de NextCloud**
 
@@ -504,7 +517,7 @@ Empty set (0.001 sec)
 
 - **Déterminer combien de tables ont été crées par NextCloud lors de la finalisation de l'installation**
   - ***Bonus points*** **si la réponse à cette question est automatiquement donnée par une requête SQL**
-  ```
+  ```sql
   MariaDB [(none)]> SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'nextcloud';
   +----------+
   | COUNT(*) |
