@@ -362,62 +362,61 @@ public (active)
 #### **🌞 Install de MariaDB sur `db.tp2.linux`**
 
 - **Je veux dans le rendu toutes les commandes réalisées**
-```
-[yrlan@db ~]$ sudo dnf install -y mariadb-server
-[yrlan@db ~]$ sudo systemctl enable mariadb
-Created symlink /etc/systemd/system/mysql.service → /usr/lib/systemd/system/mariadb.service.
-Created symlink /etc/systemd/system/mysqld.service → /usr/lib/systemd/system/mariadb.service.
-Created symlink /etc/systemd/system/multi-user.target.wants/mariadb.service → /usr/lib/systemd/system/mariadb.service.
-[yrlan@db ~]$ sudo systemctl start mariadb
+  ```
+  [yrlan@db ~]$ sudo dnf install -y mariadb-server
+  [yrlan@db ~]$ sudo systemctl enable mariadb
+  Created symlink /etc/systemd/system/mysql.service → /usr/lib/systemd/system/mariadb.service.
+  Created symlink /etc/systemd/system/mysqld.service → /usr/lib/systemd/system/mariadb.service.
+  Created symlink /etc/systemd/system/multi-user.target.wants/mariadb.service → /usr/lib/systemd/system/mariadb.service.
+  [yrlan@db ~]$ sudo systemctl start mariadb
 
-## Ici j'ai tout laisse par défaut [Y] et mis un pwd : root ( simple juste pour retenir pour le tp )
-[yrlan@db ~]$ sudo mysql_secure_installation
-```
+  ## Ici j'ai tout laisse par défaut [Y] et mis un pwd : root ( simple juste pour retenir pour le tp )
+  [yrlan@db ~]$ sudo mysql_secure_installation
+  ```
 
 - **Vous repérerez le port utilisé par MariaDB avec une commande `ss` exécutée sur `db.tp2.linux`**
-```
-[yrlan@db ~]$ sudo ss -alnpt | grep mysql
-LISTEN 0      80                 *:3306            *:*    users:(("mysqld",pid=26461,fd=21))
+  ```
+  [yrlan@db ~]$ sudo ss -alnpt | grep mysql
+  LISTEN 0      80                 *:3306            *:*    users:(("mysqld",pid=26461,fd=21))
 
-[yrlan@db ~]$ sudo firewall-cmd --add-port=3306/tcp --zone=public --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
-success
-success
-public (active)
-  target: default
-  icmp-block-inversion: no
-  interfaces: enp0s3 enp0s8
-  sources:
-  services: ssh
-  ports: 3306/tcp
-  protocols:
-  masquerade: no
-  forward-ports:
-  source-ports:
-  icmp-blocks:
-  rich rules:
-```
+  [yrlan@db ~]$ sudo firewall-cmd --add-port=3306/tcp --zone=public --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
+  success
+  success
+  public (active)
+    target: default
+    icmp-block-inversion: no
+    interfaces: enp0s3 enp0s8
+    sources:
+    services: ssh
+    ports: 3306/tcp
+    protocols:
+    masquerade: no
+    forward-ports:
+    source-ports:
+    icmp-blocks:
+    rich rules:
+  ```
 
 #### **🌞 Préparation de la base pour NextCloud**
 
 - **Une fois en place, il va falloir préparer une base de données pour NextCloud :**
   - **Connectez-vous à la base de données à l'aide de la commande `sudo mysql -u root`**
   - **Exécutez les commandes SQL suivantes :**
-
 ```SQL
 [yrlan@db ~]$ sudo mysql -u root -p
 
 # Dans notre cas, c'est l'IP de web.tp2.linux
 # "db_pwd" c'est le mot de passe :D
-CREATE USER 'nextcloud'@'10.102.1.11' IDENTIFIED BY 'db_pwd';
+MariaDB [(none)]> CREATE USER 'nextcloud'@'10.102.1.11' IDENTIFIED BY 'db_pwd';
 
 # Création de la base de donnée qui sera utilisée par NextCloud
-CREATE DATABASE IF NOT EXISTS nextcloud CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+MariaDB [(none)]> CREATE DATABASE IF NOT EXISTS nextcloud CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 # On donne tous les droits à l'utilisateur nextcloud sur toutes les tables de la base qu'on vient de créer
-GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'10.102.1.11';
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON nextcloud.* TO 'nextcloud'@'10.102.1.11';
 
 # Actualisation des privilèges
-FLUSH PRIVILEGES;
+MariaDB [(none)]> FLUSH PRIVILEGES;
 ```
 
 #### 🌞 **Exploration de la base de données**
@@ -454,6 +453,7 @@ Empty set (0.001 sec)
 - **Trouver une commande qui permet de lister tous les utilisateurs de la base de données**
   ```sql
   MariaDB [(none)]> GRANT ALL PRIVILEGES ON mysql.* TO 'nextcloud'@'10.102.1.11';
+  MariaDB [(none)]> FLUSH PRIVILEGES;
 
   MariaDB [(none)]> SELECT user,host FROM mysql.user;
   +-----------+-------------+
