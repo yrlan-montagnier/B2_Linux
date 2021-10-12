@@ -90,13 +90,12 @@ $ exit
 - un *service* `netdata` a été créé
 - déterminer s'il est actif, et s'il est paramétré pour démarrer au boot de la machine
   - si ce n'est pas le cas, faites en sorte qu'il démarre au boot de la machine
-    ```
+    ```bash
     [yrlan@web ~]$ sudo systemctl is-active netdata
     active
     [yrlan@web ~]$ sudo systemctl is-enabled netdata
     enabled
     ```
-
 - déterminer à l'aide d'une commande `ss` sur quel port Netdata écoute
     - autoriser ce port dans le firewall
     ```bash
@@ -134,41 +133,41 @@ $ exit
 - **ajustez la conf de Netdata pour mettre en place des alertes Discord**
   - **ui ui c'est bien ça : vous recevrez un message Discord quand un seul critique est atteint**
   - **noubliez pas que la conf se trouve pour nous dans `/opt/netdata/etc/netdata/`**
-    ```
-    [yrlan@web ~]$ sudo cat /opt/netdata/etc/netdata/health_alarm_notify.conf
-    ###############################################################################
-    # sending discord notifications
+  ```bash
+  [yrlan@web ~]$ sudo cat /opt/netdata/etc/netdata/health_alarm_notify.conf
+  ###############################################################################
+  # sending discord notifications
 
-    # note: multiple recipients can be given like this:
-    #                  "CHANNEL1 CHANNEL2 ..."
+  # note: multiple recipients can be given like this:
+  #                  "CHANNEL1 CHANNEL2 ..."
 
-    # enable/disable sending discord notifications
-    SEND_DISCORD="YES"
+  # enable/disable sending discord notifications
+  SEND_DISCORD="YES"
 
-    # Create a webhook by following the official documentation -
-    # https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
-    DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/897110887889006612/v-wKtDiq2QJYE6M1WMCPndNokPf6fbP-Ei33eGfhZ_DfnWXi0BfgDow4DQGfanYbAff2"
+  # Create a webhook by following the official documentation -
+  # https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+  DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/897110887889006612/v-wKtDiq2QJYE6M1WMCPndNokPf6fbP-Ei33eGfhZ_DfnWXi0BfgDow4DQGfanYbAff2"
 
-    # if a role's recipients are not configured, a notification will be send to
-    # this discord channel (empty = do not send a notification for unconfigured
-    # roles):
-    DEFAULT_RECIPIENT_DISCORD="alarms"
-    ``` 
+  # if a role's recipients are not configured, a notification will be send to
+  # this discord channel (empty = do not send a notification for unconfigured
+  # roles):
+  DEFAULT_RECIPIENT_DISCORD="alarms"
+  ``` 
 
 - vérifiez le bon fonctionnement de l'alerting sur Discord
-```
-[yrlan@web ~]$ sudo su -s /bin/bash netdata
-bash-4.4$ export NETDATA_ALARM_NOTIFY_DEBUG=1
-bash-4.4$ /opt/netdata/usr/libexec/netdata/plugins.d/alarm-notify.sh test
-[...]
---- END curl command ---
---- BEGIN received response ---
-ok
---- END received response ---
-RECEIVED HTTP RESPONSE CODE: 200
-2021-10-12 01:32:50: alarm-notify.sh: INFO: sent discord notification for: web.tp2.linux test.chart.test_alarm is CLEAR to 'alarms'
-# OK
-```
+  ```bash
+  [yrlan@web ~]$ sudo su -s /bin/bash netdata
+  bash-4.4$ export NETDATA_ALARM_NOTIFY_DEBUG=1
+  bash-4.4$ /opt/netdata/usr/libexec/netdata/plugins.d/alarm-notify.sh test
+  [...]
+  --- END curl command ---
+  --- BEGIN received response ---
+  ok
+  --- END received response ---
+  RECEIVED HTTP RESPONSE CODE: 200
+  2021-10-12 01:32:50: alarm-notify.sh: INFO: sent discord notification for: web.tp2.linux test.chart.test_alarm is CLEAR to 'alarms'
+  # OK
+  ```
 
 # II. Backup
 
@@ -189,18 +188,19 @@ RECEIVED HTTP RESPONSE CODE: 200
 - **Créer un dossier `/srv/backup/`**
 - **Il contiendra un sous-dossier ppour chaque machine du parc**
     - **Commencez donc par créer le dossier `/srv/backup/web.tp2.linux/`**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo mkdir -p /srv/backup/web.tp2.linux/
     ```
-    
 - **Il existera un partage NFS pour chaque machine (principe du moindre privilège)**
-
+  ```bash
+  [yrlan@backup ~]$ sudo mkdir -p /srv/backup/db.tp2.linux/
+  ```
 
 #### **🌞 Setup partage NFS**
 
 - **Je crois que vous commencez à connaître la chanson... Google "nfs server rocky linux"**
   - [ce lien me semble être particulièrement simple et concis](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=1)
-```
+```bash
 [yrlan@backup ~]$ sudo dnf install -y nfs-utils
 [yrlan@backup ~]$ sudo vi /etc/idmapd.conf
 [yrlan@backup ~]$ sudo cat /etc/idmapd.conf | grep Domain
@@ -234,43 +234,41 @@ public (active)
 
 - [sur le même site, y'a ça](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=2)
 - **Monter le dossier `/srv/backups/web.tp2.linux` du serveur NFS dans le dossier `/srv/backup/` du serveur Web**
-```
-[yrlan@web ~]$ sudo dnf -y install nfs-utils
-[yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
-Domain = tp2.linux
-[yrlan@web ~]$ sudo mkdir /srv/backup
-[yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
-```
-
+  ```bash
+  [yrlan@web ~]$ sudo dnf -y install nfs-utils
+  [yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
+  Domain = tp2.linux
+  [yrlan@web ~]$ sudo mkdir /srv/backup
+  [yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
+  ```
 - **Vérifier...**
-    - **Avec une commande `mount` que la partition est bien montée**
-    ```
-    [yrlan@web ~]$ sudo mount | grep backup
-    backup.tp2.linux:/srv/backup/web.tp2.linux on /srv/backup type nfs4 (rw,relatime,vers=4.2,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.102.1.11,local_lock=none,addr=10.102.1.13)
-    ```
+  - **Avec une commande `mount` que la partition est bien montée**
+  ```bash
+  [yrlan@web ~]$ sudo mount | grep backup
+  backup.tp2.linux:/srv/backup/web.tp2.linux on /srv/backup type nfs4 (rw,relatime,vers=4.2,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.102.1.11,local_lock=none,addr=10.102.1.13)
+  ```
 
-    - Avec une commande `df -h` qu'il reste de la place
-    ```
-    [yrlan@web ~]$ sudo df -h | grep backup
-    backup.tp2.linux:/srv/backup/web.tp2.linux  6.2G  2.2G  4.1G  35% /srv/backup
-    ```
+  - Avec une commande `df -h` qu'il reste de la place
+  ```bash
+  [yrlan@web ~]$ sudo df -h | grep backup
+  backup.tp2.linux:/srv/backup/web.tp2.linux  6.2G  2.2G  4.1G  35% /srv/backup
+  ```
 
-    - **Avec une commande `touch` que vous avez le droit d'écrire dans cette partition**
-    ```
-    # Création d'un fichier `testttt` dans /srv/backup
-    [yrlan@web ~]$ sudo touch /srv/backup/testttt
-    [yrlan@web ~]$ sudo ls -l /srv/backup/
-    total 0
-    -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
-    
-    # Il apparait bien dans le dossier /srv/backup/web.tp2.linux/ sur la machine backup
-    [yrlan@backup ~]$ ls -l /srv/backup/web.tp2.linux/
-    total 0
-    -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
-    ```
-
+  - **Avec une commande `touch` que vous avez le droit d'écrire dans cette partition**
+  ```bash
+  # Création d'un fichier `testttt` dans /srv/backup
+  [yrlan@web ~]$ sudo touch /srv/backup/testttt
+  [yrlan@web ~]$ sudo ls -l /srv/backup/
+  total 0
+  -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
+  
+  # Il apparait bien dans le dossier /srv/backup/web.tp2.linux/ sur la machine backup
+  [yrlan@backup ~]$ ls -l /srv/backup/web.tp2.linux/
+  total 0
+  -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
+  ```
 - **Faites en sorte que cette partition se monte automatiquement grâce au fichier `/etc/fstab`**
-    ```
+    ```bash
     [yrlan@web ~]$ sudo vi /etc/fstab
     [yrlan@web ~]$ sudo cat /etc/fstab | grep backup
     backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup nfs defaults 0 0
@@ -280,7 +278,7 @@ Domain = tp2.linux
     [yrlan@web ~]$ sudo mount -av | grep /srv/backup
     /srv/backup              : successfully mounted
     ```
-    
+  
 #### **🌟 BONUS : partitionnement avec LVM**
 
 - **Ajoutez un disque à la VM `backup.tp2.linux` (disque = sdb)**
