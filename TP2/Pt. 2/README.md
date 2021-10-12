@@ -32,18 +32,6 @@
     - [D. Reverse Proxy](#d-reverse-proxy)
     - [E. Tableau récap](#e-tableau-récap)
 
-# 0. Prérequis
-
-➜ [TP2 Part.1](../part1/README.md) terminé : on doit avoir un NextCloud et sa base de données dédiée
-
-➜ Machines Rocky Linux
-
-➜ Un unique host-only côté VBox, ça suffira. **L'adresse du réseau host-only sera `10.102.1.0/24`.**
-
-➜ Chaque **création de machines** sera indiqué par **l'emoji 🖥️ suivi du nom de la machine**
-
-➜ Si je veux **un fichier dans le rendu**, il y aura l'**emoji 📁 avec le nom du fichier voulu**. Le fichier devra être livré tel quel dans le dépôt git, ou dans le corps du rendu Markdown si c'est lisible et correctement formaté.
-
 ## Checklist
 
 A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 :
@@ -69,33 +57,6 @@ On bouge pas pour le moment niveau machines :
 
 ## 1. Le concept
 
-La surveillance ou *monitoring* consiste à surveiller la bonne santé d'une entité.  
-J'utilise volontairement le terme vague "entité" car cela peut être très divers :
-
-- une machine
-- une application
-- un lien entre deux machines
-- etc.
-
----
-
-**Le monitoring s'effectue en plusieurs étapes :**
-
-- ***scraping***
-  - un programme tourne sur la machine pour récupérer des métriques sur le système
-  - récupérer l'état de remplissage de la RAM par exemple
-- ***centralisation*** des données (optionnel)
-  - dans le cas d'un gros parc de machines, les métriques récupérées sont centralisées sur un unique serveur
-- ***visualisation*** des données
-  - une joulie interface est dispo pour visualiser les métriques
-  - des courbes dans tous les sens
-- ***alerting***
-  - l'administrateur définit des seuils critiques pour certaines métriques
-  - si le seuil est dépassé, une alerte est envoyée (mail, Discord, Slack, etc.) pour être prévenu immédiatement d'un soucis
-  - dans le cas de la RAM par exemple, on sera prévenus **avant** que la RAM soit remplie
-
----
-
 **Dans notre cas on va surveiller deux choses :**
 
 - d'une part, les machines : ***monitoring système***. Par exemple :
@@ -107,13 +68,6 @@ J'utilise volontairement le terme vague "entité" car cela peut être très dive
 
 ## 2. Setup
 
-De nombreuses solutions de monitoring existent sur le marché. Nous, on va utiliser [Netdata](https://www.netdata.cloud/).  
-
-Maintenant, vous êtes des techs. Alors la page qui vous intéresse encore plus, c'est [le dépôt git de la solution](https://github.com/netdata/netdata).
-
-- le README.md y est souvent très complet
-- présente la solution, et les étapes d'install
-- fournit les liens vers la doc
 
 🌞 **Setup Netdata**
 
@@ -136,29 +90,85 @@ $ exit
 - un *service* `netdata` a été créé
 - déterminer s'il est actif, et s'il est paramétré pour démarrer au boot de la machine
   - si ce n'est pas le cas, faites en sorte qu'il démarre au boot de la machine
+    ```
+    [yrlan@web ~]$ sudo systemctl is-active netdata
+    active
+    [yrlan@web ~]$ sudo systemctl is-enabled netdata
+    enabled
+    ```
+
 - déterminer à l'aide d'une commande `ss` sur quel port Netdata écoute
-- autoriser ce port dans le firewall
+    - autoriser ce port dans le firewall
+    ```bash
+    [yrlan@web ~]$ sudo ss -alnpt | grep netdata
+    LISTEN 0      128        127.0.0.1:8125       0.0.0.0:*    users:(("netdata",pid=2305,fd=45))
+    LISTEN 0      128          0.0.0.0:19999      0.0.0.0:*    users:(("netdata",pid=2305,fd=5))
+    LISTEN 0      128            [::1]:8125          [::]:*    users:(("netdata",pid=2305,fd=44))
+    LISTEN 0      128             [::]:19999         [::]:*    users:(("netdata",pid=2305,fd=6))
 
-**Eeeeet.... c'est tout !**, rendez-vous sur `http://IP_VM:PORT` pour accéder à l'interface Web de Netdata (depuis un navigateur sur votre PC).  
-**C'est sexy na ? Et c'est en temps réel :3**
+    [yrlan@web ~]$ sudo firewall-cmd --add-port=19999/tcp --permanent; sudo firewall-cmd --add-port=8125/tcp --permanent
+    success
+    success
+    [yrlan@web ~]$ sudo firewall-cmd --reload; sudo firewall-cmd --list-all
+    success
+    public (active)
+      target: default
+      icmp-block-inversion: no
+      interfaces: enp0s3 enp0s8
+      sources:
+      services: ssh
+      ports: 80/tcp 19999/tcp 8125/tcp
+      protocols:
+      masquerade: no
+      forward-ports:
+      source-ports:
+      icmp-blocks:
+      rich rules:
+      
+    PS C:\Users\yrlan> curl http://web.tp2.linux:19999/
+    <!doctype html><html lang="en"><head><title>netdata dashboard</title>[...]</body></html>
+    ```
 
-🌞 **Setup Alerting**
+#### **🌞 Setup Alerting**
 
-- ajustez la conf de Netdata pour mettre en place des alertes Discord
-  - *ui ui c'est bien ça :* vous recevrez un message Discord quand un seul critique est atteint
-- [c'est là que ça se passe dans la doc de Netdata](https://learn.netdata.cloud/docs/agent/health/notifications/discord)
+- **ajustez la conf de Netdata pour mettre en place des alertes Discord**
+  - **ui ui c'est bien ça : vous recevrez un message Discord quand un seul critique est atteint**
+  - **noubliez pas que la conf se trouve pour nous dans `/opt/netdata/etc/netdata/`**
+    ```
+    [yrlan@web ~]$ sudo cat /opt/netdata/etc/netdata/health_alarm_notify.conf
+    ###############################################################################
+    # sending discord notifications
+
+    # note: multiple recipients can be given like this:
+    #                  "CHANNEL1 CHANNEL2 ..."
+
+    # enable/disable sending discord notifications
+    SEND_DISCORD="YES"
+
+    # Create a webhook by following the official documentation -
+    # https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+    DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/897110887889006612/v-wKtDiq2QJYE6M1WMCPndNokPf6fbP-Ei33eGfhZ_DfnWXi0BfgDow4DQGfanYbAff2"
+
+    # if a role's recipients are not configured, a notification will be send to
+    # this discord channel (empty = do not send a notification for unconfigured
+    # roles):
+    DEFAULT_RECIPIENT_DISCORD="alarms"
+    ``` 
+
 - vérifiez le bon fonctionnement de l'alerting sur Discord
-
-🌞 **Config alerting**
-
-- créez une nouvelle alerte pour recevoir une alerte à 50% de remplissage de la RAM
-- testez que votre alerte fonctionne
-  - il faudra remplir artificiellement la RAM pour voir si l'alerte remonte correctement
-  - sur Linux, on utilise la commande `stress` pour ça
-
-> Le terme *"stress test"* est employé de façon générique pour désigner le fait de générer artificiellement de la charge sur un système, afin de l'éprouver, tester comment il réagit. Vous allez donc ici effectuer un *stress test de la RAM*.
-
-![stress test](./pics/stress-test.jpg)
+```
+[yrlan@web ~]$ sudo su -s /bin/bash netdata
+bash-4.4$ export NETDATA_ALARM_NOTIFY_DEBUG=1
+bash-4.4$ /opt/netdata/usr/libexec/netdata/plugins.d/alarm-notify.sh test
+[...]
+--- END curl command ---
+--- BEGIN received response ---
+ok
+--- END received response ---
+RECEIVED HTTP RESPONSE CODE: 200
+2021-10-12 01:32:50: alarm-notify.sh: INFO: sent discord notification for: web.tp2.linux test.chart.test_alarm is CLEAR to 'alarms'
+# OK
+```
 
 # II. Backup
 
@@ -172,59 +182,201 @@ $ exit
 
 **Déroulez la [📝**checklist**📝](#checklist) sur cette VM.**
 
-## 1. Intwo bwo
-
-**La *backup* consiste à extraire des données de leur emplacement original afin de les stocker dans un endroit dédié.**  
-
-**Cet endroit dédié est un endroit sûr** : le but est d'assurer la perennité des données sauvegardées, tout en maintenant leur niveau de sécurité.
-
-Pour la sauvegarde, il existe plusieurs façon de procéder. Pour notre part, nous allons procéder comme suit :
-
-- **création d'un serveur de stockage**
-  - il hébergera les sauvegardes de tout le monde
-  - ce sera notre "endroit sûr"
-  - ce sera un partage NFS
-  - ainsi, toutes les machines qui en ont besoin pourront accéder à un dossier qui leur est dédié sur ce serveur de stockage, afin d'y stocker leurs sauvegardes
-- **développement d'un script de backup**
-  - ce script s'exécutera en local sur les machines à sauvegarder
-  - il s'exécute à intervalles de temps réguliers
-  - il envoie les données à sauvegarder sur le serveur NFS
-  - du point de vue du script, c'est un dossier local. Mais en réalité, ce dossier est monté en NFS.
-
-![You're supposed to backup everything](./pics/backup_meme.jpg)
-
 ## 2. Partage NFS
 
-🌞 **Setup environnement**
+#### 🌞 **Setup environnement**
 
-- créer un dossier `/srv/backup/`
-- il contiendra un sous-dossier ppour chaque machine du parc
-  - commencez donc par créer le dossier `/srv/backup/web.tp2.linux/`
-- il existera un partage NFS pour chaque machine (principe du moindre privilège)
+- **Créer un dossier `/srv/backup/`**
+- **Il contiendra un sous-dossier ppour chaque machine du parc**
+    - **Commencez donc par créer le dossier `/srv/backup/web.tp2.linux/`**
+    ```
+    [yrlan@backup ~]$ sudo mkdir -p /srv/backup/web.tp2.linux/
+    ```
+    
+- **Il existera un partage NFS pour chaque machine (principe du moindre privilège)**
 
-🌞 **Setup partage NFS**
 
-- je crois que vous commencez à connaître la chanson... Google "nfs server rocky linux"
+#### **🌞 Setup partage NFS**
+
+- **Je crois que vous commencez à connaître la chanson... Google "nfs server rocky linux"**
   - [ce lien me semble être particulièrement simple et concis](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=1)
+```
+[yrlan@backup ~]$ sudo dnf install -y nfs-utils
+[yrlan@backup ~]$ sudo vi /etc/idmapd.conf
+[yrlan@backup ~]$ sudo cat /etc/idmapd.conf | grep Domain
+Domain = tp2.linux
 
-🌞 **Setup points de montage sur `web.tp2.linux`**
+[yrlan@backup ~]$ sudo vi /etc/exports
+[yrlan@backup ~]$ sudo cat /etc/exports
+/srv/backup/web.tp2.linux 10.102.1.11/24(rw,no_root_squash)
+
+[yrlan@backup backup]$ sudo firewall-cmd --add-service=nfs --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
+success
+success
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp0s3 enp0s8
+  sources:
+  services: nfs ssh
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+  
+[yrlan@backup backup]$ sudo systemctl enable --now rpcbind nfs-server
+```
+
+#### **🌞 Setup points de montage sur `web.tp2.linux`**
 
 - [sur le même site, y'a ça](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=2)
-- monter le dossier `/srv/backups/web.tp2.linux` du serveur NFS dans le dossier `/srv/backup/` du serveur Web
-- vérifier...
-  - avec une commande `mount` que la partition est bien montée
-  - avec une commande `df -h` qu'il reste de la place
-  - avec une commande `touch` que vous avez le droit d'écrire dans cette partition
-- faites en sorte que cette partition se monte automatiquement grâce au fichier `/etc/fstab`
+- **Monter le dossier `/srv/backups/web.tp2.linux` du serveur NFS dans le dossier `/srv/backup/` du serveur Web**
+```
+[yrlan@web ~]$ sudo dnf -y install nfs-utils
+[yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
+Domain = tp2.linux
+[yrlan@web ~]$ sudo mkdir /srv/backup
+[yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
+```
 
-🌟 **BONUS** : partitionnement avec LVM
+- **Vérifier...**
+    - **Avec une commande `mount` que la partition est bien montée**
+    ```
+    [yrlan@web ~]$ sudo mount | grep backup
+    backup.tp2.linux:/srv/backup/web.tp2.linux on /srv/backup type nfs4 (rw,relatime,vers=4.2,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.102.1.11,local_lock=none,addr=10.102.1.13)
+    ```
 
-- ajoutez un disque à la VM `backup.tp2.linux`
-- utilisez LVM pour créer une nouvelle partition (5Go ça ira)
-- monter automatiquement cette partition au démarrage du système à l'aide du fichier `/etc/fstab`
-- cette nouvelle partition devra être montée sur le dossier `/srv/backup/`
+    - Avec une commande `df -h` qu'il reste de la place
+    ```
+    [yrlan@web ~]$ sudo df -h | grep backup
+    backup.tp2.linux:/srv/backup/web.tp2.linux  6.2G  2.2G  4.1G  35% /srv/backup
+    ```
 
-## 3. Backup de fichiers
+    - **Avec une commande `touch` que vous avez le droit d'écrire dans cette partition**
+    ```
+    # Création d'un fichier `testttt` dans /srv/backup
+    [yrlan@web ~]$ sudo touch /srv/backup/testttt
+    [yrlan@web ~]$ sudo ls -l /srv/backup/
+    total 0
+    -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
+    
+    # Il apparait bien dans le dossier /srv/backup/web.tp2.linux/ sur la machine backup
+    [yrlan@backup ~]$ ls -l /srv/backup/web.tp2.linux/
+    total 0
+    -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
+    ```
+
+- **Faites en sorte que cette partition se monte automatiquement grâce au fichier `/etc/fstab`**
+    ```
+    [yrlan@web ~]$ sudo vi /etc/fstab
+    [yrlan@web ~]$ sudo cat /etc/fstab | grep backup
+    backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup nfs defaults 0 0
+    
+    ## TEST : 
+    [yrlan@web ~]$ sudo umount /srv/backup
+    [yrlan@web ~]$ sudo mount -av | grep /srv/backup
+    /srv/backup              : successfully mounted
+    ```
+    
+#### **🌟 BONUS : partitionnement avec LVM**
+
+- **Ajoutez un disque à la VM `backup.tp2.linux` (disque = sdb)**
+- **Utilisez LVM pour créer une nouvelle partition (5Go ça ira)**
+```bash
+[yrlan@backup ~]$ lsblk
+NAME        MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+sda           8:0    0    8G  0 disk
+├─sda1        8:1    0    1G  0 part /boot
+└─sda2        8:2    0    7G  0 part
+  ├─rl-root 253:0    0  6.2G  0 lvm  /
+  └─rl-swap 253:1    0  820M  0 lvm  [SWAP]
+sdb           8:16   0    8G  0 disk
+sr0          11:0    1 1024M  0 rom
+
+## On crée un Physical Volume sur le disque qu'on a repéré
+[yrlan@backup ~]$ sudo pvcreate /dev/sdb; sudo pvs
+  Physical volume "/dev/sdb" successfully created.
+  
+  PV         VG Fmt  Attr PSize  PFree
+  /dev/sda2  rl lvm2 a--  <7.00g    0
+  /dev/sdb      lvm2 ---   8.00g 8.00g  
+    
+# On crée un Volume Group
+[yrlan@backup ~]$ sudo vgcreate backup /dev/sdb; sudo vgs
+  Volume group "backup" successfully created
+  VG     #PV #LV #SN Attr   VSize  VFree
+  backup   1   0   0 wz--n- <8.00g <8.00g
+  rl       1   2   0 wz--n- <7.00g     0
+    
+# On crée un Logical Volume ( Logical Volume = Partition )
+[yrlan@backup ~]$ sudo lvcreate -L 5G backup -n Backup
+  Logical volume "Backup" created.
+[yrlan@backup ~]$ sudo lvs
+  LV     VG     Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  Backup backup -wi-a-----   5.00g
+  root   rl     -wi-ao----  <6.20g
+  swap   rl     -wi-ao---- 820.00m
+
+# Formater partition en ext4
+[yrlan@backup ~]$ sudo mkfs -t ext4 /dev/mapper/backup-Backup
+mke2fs 1.45.6 (20-Mar-2020)
+Creating filesystem with 1310720 4k blocks and 327680 inodes
+Filesystem UUID: 2c1c6c5b-62bf-4ee2-b96f-2750feaed879
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (16384 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+# Montage de la partition ( notre Lv ) sur /srv/backup
+[yrlan@backup ~]$ sudo mount /dev/backup/Backup /srv/backup
+
+# Vérifs :
+[yrlan@backup ~]$ df -h | grep backup
+/dev/mapper/backup-Backup  4.9G   20M  4.6G   1% /srv/backup
+
+[yrlan@backup ~]$ lsblk | grep backup
+└─backup-Backup 253:2    0    5G  0 lvm  /srv/backup
+```
+
+- **Monter automatiquement cette partition au démarrage du système à l'aide du fichier `/etc/fstab`**
+- **Cette nouvelle partition devra être montée sur le dossier `/srv/backup/`**
+
+```bash
+# Config
+[yrlan@backup ~]$ sudo cat /etc/fstab | grep /dev/backup/Backup
+/dev/backup/Backup /srv/backup ext4 defaults 0 0
+
+# Vérif montage auto partition sur /srv/backup
+[yrlan@backup ~]$ sudo umount /srv/backup
+[yrlan@backup ~]$ sudo mount -av | grep /srv/backup
+/srv/backup              : successfully mounted
+
+# Vérif montage sur machine Web
+[yrlan@web ~]$ sudo umount /srv/backup
+[yrlan@web ~]$ sudo mount -av | grep /srv/backup
+/srv/backup              : successfully mounted
+
+# C'est bien notre partition de 5Go qui est utilisé pour le dossier /srv/backup
+[yrlan@web ~]$ df -h | grep backup
+backup.tp2.linux:/srv/backup/web.tp2.linux  4.9G   20M  4.6G   1% /srv/backup
+
+[yrlan@db ~]$ df -h | grep backup
+backup.tp2.linux:/srv/backup/db.tp2.linux  4.9G   20M  4.6G   1% /srv/backup
+
+[yrlan@backup ~]$ df -h | grep backup
+/dev/mapper/backup-Backup  4.9G   20M  4.6G   1% /srv/backup
+
+[yrlan@backup ~]$ lsblk | grep backup
+└─backup-Backup 253:2    0    5G  0 lvm  /srv/backup
+```
+
+## **3. Backup de fichiers**
 
 **Un peu de scripting `bash` !** Le scripting est le meilleur ami de l'admin, vous allez pas y couper hihi.  
 
