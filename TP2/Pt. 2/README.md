@@ -1000,7 +1000,7 @@ drop (active)
   icmp-blocks:
   rich rules:
 db (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.11/32
@@ -1013,7 +1013,7 @@ db (active)
   icmp-blocks:
   rich rules:
 ssh (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.1/32
@@ -1074,7 +1074,7 @@ drop (active)
   icmp-blocks:
   rich rules:
 web (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.14/32
@@ -1087,7 +1087,7 @@ web (active)
   icmp-blocks:
   rich rules:
 ssh (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.1/32
@@ -1149,7 +1149,7 @@ drop (active)
   icmp-blocks:
   rich rules:
 backups (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.11/32 10.102.1.12/32
@@ -1162,7 +1162,7 @@ backups (active)
   icmp-blocks:
   rich rules:
 ssh (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.1/32
@@ -1223,7 +1223,7 @@ drop (active)
   icmp-blocks:
   rich rules:
 proxy (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.0/24
@@ -1236,7 +1236,7 @@ proxy (active)
   icmp-blocks:
   rich rules:
 ssh (active)
-  target: default
+  target: DROP
   icmp-block-inversion: no
   interfaces:
   sources: 10.102.1.1/32
@@ -1249,6 +1249,7 @@ ssh (active)
   icmp-blocks:
   rich rules:
 ```
+
 
 ### **E. Tableau récap**
 
