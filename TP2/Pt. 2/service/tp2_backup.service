@@ -2,7 +2,7 @@
 Description=Our own lil backup service (TP2)
 
 [Service]
-ExecStart=/srv/tp2_backup.sh /srv/backup/Archives /srv/backup/web.tp2.linux
+ExecStart=/srv/tp2_backup.sh /srv/backup/Archives /var/www/sub-domains/web.tp2.linux
 Type=oneshot
 RemainAfterExit=no
 
