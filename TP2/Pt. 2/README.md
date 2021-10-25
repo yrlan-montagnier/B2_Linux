@@ -132,7 +132,7 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
 - **Ajustez la conf de Netdata pour mettre en place des alertes Discord**
   - **Ui ui c'est bien ça : vous recevrez un message Discord quand un seul critique est atteint**
   - **Noubliez pas que la conf se trouve pour nous dans `/opt/netdata/etc/netdata/`**
-    ```
+    ```bash
     [yrlan@web ~]$ sudo cat /opt/netdata/etc/netdata/health_alarm_notify.conf
     ###############################################################################
     # sending discord notifications
@@ -154,7 +154,7 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
     ``` 
 
 - **Vérifiez le bon fonctionnement de l'alerting sur Discord**
-    ```
+    ```bash
     [yrlan@web ~]$ sudo su -s /bin/bash netdata
     bash-4.4$ export NETDATA_ALARM_NOTIFY_DEBUG=1
     bash-4.4$ /opt/netdata/usr/libexec/netdata/plugins.d/alarm-notify.sh test
@@ -173,11 +173,9 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
     ```
 
 **⚠️⚠️⚠️ Une fois que vos tests d'alertes fonctionnent, vous DEVEZ taper la commande qui suit pour que votre alerting fonctionne correctement ⚠️⚠️⚠️**
-```
+```bash
 [yrlan@web ~]$ sudo sed -i 's/curl=""/curl="\/opt\/netdata\/bin\/curl -k"/' /opt/netdata/etc/netdata/health_alarm_notify.conf
-```
-
-    
+```    
 
 # **II. Backup**
 
@@ -212,16 +210,16 @@ Pour la sauvegarde, il existe plusieurs façon de procéder. Pour notre part, no
 #### **🌞 Setup environnement**
 
 - **Créer un dossier `/srv/backup/`**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo mkdir /srv/backup/
     ```
 - **Il contiendra un sous-dossier ppour chaque machine du parc**
     - **Commencez donc par créer le dossier `/srv/backup/web.tp2.linux/`**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo mkdir -p /srv/backup/web.tp2.linux/
     ```
 - **Il existera un partage NFS pour chaque machine (principe du moindre privilège)**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo mkdir -p /srv/backup/db.tp2.linux/
     ```
 
@@ -306,12 +304,13 @@ public (active)
     ```
 
 - **Faites en sorte que cette partition se monte automatiquement grâce au fichier `/etc/fstab`**
-    ```
+    ```bash
+    # Conf montage auto
     [yrlan@web ~]$ sudo vi /etc/fstab
     [yrlan@web ~]$ sudo cat /etc/fstab | grep backup
     backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup nfs defaults 0 0
     
-    ## TEST : 
+    # Test : 
     [yrlan@web ~]$ sudo umount /srv/backup
     [yrlan@web ~]$ sudo mount -av | grep /srv/backup
     /srv/backup              : successfully mounted
@@ -420,7 +419,7 @@ backup.tp2.linux:/srv/backup/db.tp2.linux  4.9G   20M  4.6G   1% /srv/backup
 - **L'archive générée doit s'appeler** `tp2_backup_YYMMDD_HHMMSS.tar.gz`
 - **Le script utilise la commande `rsync` afin d'envoyer la sauvegarde dans le dossier de destination**
 - **Il DOIT pouvoir être appelé de la sorte :**
-```
+```bash
 $ ./tp2_backup.sh <DESTINATION> <DOSSIER_A_BACKUP>
 ```
 
@@ -431,10 +430,6 @@ $ ./tp2_backup.sh <DESTINATION> <DOSSIER_A_BACKUP>
 
 destination=$1
 folder2backup=$2
-echo ${folder2backup}
-
-date=$(date +%y%m%d_%H%M%S)
-filename=$(pwd)/"tp2_backup_${date}.tar.gz"
 
 if [ -z "$destination" ]; then
 
@@ -442,16 +437,24 @@ if [ -z "$destination" ]; then
   exit 0
 fi
 
-tar -cfzv "tp2_backup_${date}.tar.gz" $folder2backup
-rsync -av --remove-source-files ${filename} ${folder2backup}
+
+if [ -d "$destination" ]; then
+        filename="${folder2backup}_$(date '+%y-%m-%d_%H-%M-%S').tar.gz"
+        tar -czf "$filename" "$folder2backup"
+        rsync -av $filename $destination
+        echo "Archive successfully created."
+        else
+        echo "ATTENTION: Le dossier de destination n'existe pas: $destination"
+
+fi
 ```
     
 > 📁 **[Fichier `/srv/tp2_backup.sh`](./script/tp2_backup.sh)**
 
-#### *🌞 Tester le bon fonctionnement**
+#### **🌞 Tester le bon fonctionnement**
 
-- **exécuter le script sur le dossier de votre choix**
-    ```
+- **Exécuter le script sur le dossier de votre choix**
+    ```bash
     [yrlan@backup ~]$ sudo bash -x /srv/tp2_backup.sh /srv/backup/Archives/ /srv/backup/web.tp2.linux
 
     + destination=/srv/backup/Archives/
@@ -472,14 +475,15 @@ rsync -av --remove-source-files ${filename} ${folder2backup}
     Archive successfully created.
     ```
 - **prouvez que la backup s'est bien exécutée**
-    ```
+    ```bash
     [yrlan@backup backup]$ ls -l Archives/ | grep web.tp2.linux_21-10-24_23-07-47.tar.gz
     -rw-r--r--. 1 root root 166 Oct 24 23:07 web.tp2.linux_21-10-24_23-07-47.tar.gz
     ```
 - **tester de restaurer les données**
   - récupérer l'archive générée, et vérifier son contenu
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo tar zxvf /srv/backup/Archives/tp2_backup_211025_031915.tar.gz
+    [...]
     
     [yrlan@backup backup]$ ls -l srv/backup/web.tp2.linux/
     total 0
@@ -512,7 +516,7 @@ $ sudo systemctl status tp2_backup
 - **C'est juste un fichier texte hein**
 - **Doit se trouver dans le dossier `/etc/systemd/system/`**
 - **Doit s'appeler `tp2_backup.service`**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo nano /etc/systemd/system/tp2_backup.service
     ```
 - **le contenu :**
@@ -539,7 +543,7 @@ $ sudo systemctl status tp2_backup
 - **Essayez d'effectuer une sauvegarde avec `sudo systemctl start tp2_backup`**
 - **Prouvez que la backup s'est bien exécutée**
   - **Vérifiez la présence de la nouvelle archive**
-    ```
+    ```bash
     [yrlan@backup backup]$ sudo systemctl daemon-reload
     [yrlan@backup backup]$ sudo systemctl start tp2_backup
     [yrlan@backup backup]$ ls -l Archives/
@@ -558,7 +562,7 @@ Un *`timer systemd`* permet l'exécution d'un *service* à intervalles régulier
 - **Toujours juste un fichier texte**
 - **Dans le dossier `/etc/systemd/system/` aussi**
 - **Fichier `tp2_backup.timer`**
-    ```
+    ```bash
     [yrlan@backup backup]$ sudo nano /etc/systemd/system/tp2_backup.timer
     ```
 - **Contenu du fichier :**
@@ -584,18 +588,18 @@ Un *`timer systemd`* permet l'exécution d'un *service* à intervalles régulier
 
 - **Démarrer le *timer* : `sudo systemctl start tp2_backup.timer`**
 - **Activer le au démarrage avec une autre commande `systemctl` :**
-    ```
+    ```bash
     [yrlan@backup srv]$ sudo systemctl enable tp2_backup.timer
     Created symlink /etc/systemd/system/timers.target.wants/tp2_backup.timer → /etc/systemd/system/tp2_backup.timer.
     ```
 - **Prouver que...**
     - **Le *timer* est actif actuellement** = 
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo systemctl is-active tp2_backup.timer 
     active
     ```
     - **Qu'il est paramétré pour être actif dès que le système boot**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo systemctl is-enabled tp2_backup.timer
     enabled
     ```
@@ -604,7 +608,7 @@ Un *`timer systemd`* permet l'exécution d'un *service* à intervalles régulier
 
 - **Avec la ligne `OnCalendar=*-*-* *:*:00`, le *timer* déclenche l'exécution du *service* toutes les minutes**
 - **Vérifiez que la backup s'exécute correctement**
-    ```
+    ```bash
     [yrlan@backup backup]$ ls -l Archives/
     total 40
     -rw-r--r--. 1 root root 126 Oct 24 23:23 db.tp2.linux_21-10-24_23-23-03.tar.gz
@@ -621,10 +625,10 @@ Un *`timer systemd`* permet l'exécution d'un *service* à intervalles régulier
 
 #### **🌞 Faites en sorte que...**
 
-- **votre backup s'exécute sur la machine `web.tp2.linux`**
-- **le dossier sauvegardé est celui qui contient le site NextCloud (quelque part dans `/var/`)**
-- **la destination est le dossier NFS monté depuis le serveur `backup.tp2.linux`**
-    ```
+- **Votre backup s'exécute sur la machine `web.tp2.linux`**
+- **Le dossier sauvegardé est celui qui contient le site NextCloud (quelque part dans `/var/`)**
+- **La destination est le dossier NFS monté depuis le serveur `backup.tp2.linux`**
+    ```bash
     [yrlan@web nextcloud]$ sudo mount | grep backup
     backup.tp2.linux:/srv/backup/web.tp2.linux on /var/www/sub-domains/web.tp2.linux type nfs4
 
@@ -633,13 +637,13 @@ Un *`timer systemd`* permet l'exécution d'un *service* à intervalles régulier
     total 142312
     -rw-r--r--. 1 root root 145725914 Oct 25 00:04 web.tp2.linux_21-10-25_00-03-41.tar.gz
     ```
-- **la sauvegarde s'exécute tous les jours à 03h15 du matin**
-    ```
+- **La sauvegarde s'exécute tous les jours à 03h15 du matin**
+    ```bash
     [yrlan@backup backup]$ sudo cat /etc/systemd/system/tp2_backup.timer | grep "OnCalendar"
     OnCalendar=*-*-* 3:15:00
     ```
-- **prouvez avec la commande `sudo systemctl list-timers` que votre *service* va bien s'exécuter la prochaine fois qu'il sera 03h15**
-    ```
+- **Prouvez avec la commande `sudo systemctl list-timers` que votre *service* va bien s'exécuter la prochaine fois qu'il sera 03h15**
+    ```bash
     [yrlan@backup backup]$ sudo systemctl list-timers
     NEXT                          LEFT         LAST                          PASSED      UNIT                         ACTIVATES
     Mon 2021-10-25 00:29:33 CEST  16min left   Sun 2021-10-24 23:09:03 CEST  1h 3min ago dnf-makecache.timer          dnf-makecache.service
@@ -919,8 +923,11 @@ A ce stade vous avez :
     ```
     [yrlan@front ~]$ sudo cat /etc/nginx/conf.d/web.tp2.linux.conf
     server {
-            listen 80;
+            listen 443 ssl;
             server_name web.tp2.linux;
+
+            ssl_certificate     /etc/pki/tls/certs/web.tp2.linux.crt
+            ssl_certificate_key /etc/pki/tls/private/web.tp2.linux.key
 
             location / {
                     proxy_pass http://web.tp2.linux;
@@ -1000,7 +1007,8 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
     ```bash
     [yrlan@db ~]$ sudo firewall-cmd --set-default-zone=drop
     sucess
-    [yrlan@db ~]$ sudo firewall-cmd --new-zone=db --permanent; sudo firewall-cmd --zone=db --add-source=10.102.1.11/32 --permanent-; sudo firewall-cmd --zone=db --add-port=3306/tcp --permanent; sudo firewall-cmd --reload; 
+    [yrlan@db ~]$ sudo firewall-cmd --new-zone=db --permanent; sudo firewall-cmd --zone=db --add-source=10.102.1.11/32 --permanent-; sudo firewall-cmd --zone=db --add-port=3306/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=db --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1008,7 +1016,8 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
     ```
 - **Vous devez aussi autoriser votre accès SSH**
     ```bash
-    sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=ssh --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1074,7 +1083,8 @@ ssh (active)
 - **seul le reverse proxy `front.tp2.linux` doit accéder au serveur web sur le port 80**
     ```bash
     [yrlan@web ~]$ sudo firewall-cmd --set-default-zone=drop
-    [yrlan@web ~]$ sudo firewall-cmd --new-zone=web --permanent; sudo firewall-cmd --zone=web --add-source=10.102.1.14/32 --permanent; sudo firewall-cmd --zone=web --add-port=80/tcp --permanent; sudo firewall-cmd --reload;
+    [yrlan@web ~]$ sudo firewall-cmd --new-zone=web --permanent; sudo firewall-cmd --zone=web --add-source=10.102.1.14/32 --permanent; sudo firewall-cmd --zone=web --add-port=80/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=web --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1082,7 +1092,8 @@ ssh (active)
     ```
 - **n'oubliez pas votre accès SSH**
     ```bash
-    [yrlan@web ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    [yrlan@web ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=ssh --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1148,7 +1159,8 @@ ssh (active)
 - **Seules les machines qui effectuent des backups doivent être autorisées à contacter le serveur de backup *via* NFS**
     ```bash
     [yrlan@backup ~]$ sudo firewall-cmd --set-default-zone=drop
-    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=backups --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.11/32 --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.12/32 --permanent; sudo firewall-cmd --zone=backups --add-service=nfs --permanent; sudo firewall-cmd --reload;
+    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=backups --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.11/32 --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.12/32 --permanent; sudo firewall-cmd --zone=backups --add-service=nfs --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=backups --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1156,7 +1168,8 @@ ssh (active)
     ```
 - **N'oubliez pas votre accès SSH**
     ```bash
-    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=ssh --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1223,8 +1236,9 @@ ssh (active)
 
 - **Seules les machines du réseau `10.102.1.0/24` doivent pouvoir joindre le proxy**
     ```bash
-    [yrlan@front ~]$ sudo firewall-cmd --new-zone=proxy --permanent; sudo firewall-cmd --zone=proxy --add-source=10.102.1.0/24 --permanent; sudo firewall-cmd --zone=proxy --add-port=443/tcp --permanent; sudo firewall-cmd --reload;
+    [yrlan@front ~]$ sudo firewall-cmd --new-zone=proxy --permanent; sudo firewall-cmd --zone=proxy --add-source=10.102.1.0/24 --permanent; sudo firewall-cmd --zone=proxy --add-port=443/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=proxy --set-target=DROP --permanent
     [sudo] password for yrlan:
+    success
     success
     success
     success
@@ -1233,7 +1247,8 @@ ssh (active)
     ```
 - **N'oubliez pas votre accès SSH**
     ```bash
-    [yrlan@front ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    [yrlan@front ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --zone=ssh --set-target=DROP --permanent
+    success
     success
     success
     success
@@ -1290,7 +1305,6 @@ ssh (active)
   icmp-blocks:
   rich rules:
 ```
-
 
 ### **E. Tableau récap**
 
