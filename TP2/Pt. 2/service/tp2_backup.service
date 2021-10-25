@@ -1,0 +1,10 @@
+[Unit]
+Description=Our own lil backup service (TP2)
+
+[Service]
+ExecStart=/srv/tp2_backup.sh /srv/backup/Archives /srv/backup/web.tp2.linux
+Type=oneshot
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

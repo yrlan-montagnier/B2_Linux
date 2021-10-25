@@ -90,12 +90,13 @@ $ exit
 - un *service* `netdata` a été créé
 - déterminer s'il est actif, et s'il est paramétré pour démarrer au boot de la machine
   - si ce n'est pas le cas, faites en sorte qu'il démarre au boot de la machine
-    ```bash
+    ```
     [yrlan@web ~]$ sudo systemctl is-active netdata
     active
     [yrlan@web ~]$ sudo systemctl is-enabled netdata
     enabled
     ```
+
 - déterminer à l'aide d'une commande `ss` sur quel port Netdata écoute
     - autoriser ce port dans le firewall
     ```bash
@@ -133,41 +134,41 @@ $ exit
 - **ajustez la conf de Netdata pour mettre en place des alertes Discord**
   - **ui ui c'est bien ça : vous recevrez un message Discord quand un seul critique est atteint**
   - **noubliez pas que la conf se trouve pour nous dans `/opt/netdata/etc/netdata/`**
-  ```bash
-  [yrlan@web ~]$ sudo cat /opt/netdata/etc/netdata/health_alarm_notify.conf
-  ###############################################################################
-  # sending discord notifications
+    ```
+    [yrlan@web ~]$ sudo cat /opt/netdata/etc/netdata/health_alarm_notify.conf
+    ###############################################################################
+    # sending discord notifications
 
-  # note: multiple recipients can be given like this:
-  #                  "CHANNEL1 CHANNEL2 ..."
+    # note: multiple recipients can be given like this:
+    #                  "CHANNEL1 CHANNEL2 ..."
 
-  # enable/disable sending discord notifications
-  SEND_DISCORD="YES"
+    # enable/disable sending discord notifications
+    SEND_DISCORD="YES"
 
-  # Create a webhook by following the official documentation -
-  # https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
-  DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/897110887889006612/v-wKtDiq2QJYE6M1WMCPndNokPf6fbP-Ei33eGfhZ_DfnWXi0BfgDow4DQGfanYbAff2"
+    # Create a webhook by following the official documentation -
+    # https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+    DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/897110887889006612/v-wKtDiq2QJYE6M1WMCPndNokPf6fbP-Ei33eGfhZ_DfnWXi0BfgDow4DQGfanYbAff2"
 
-  # if a role's recipients are not configured, a notification will be send to
-  # this discord channel (empty = do not send a notification for unconfigured
-  # roles):
-  DEFAULT_RECIPIENT_DISCORD="alarms"
-  ``` 
+    # if a role's recipients are not configured, a notification will be send to
+    # this discord channel (empty = do not send a notification for unconfigured
+    # roles):
+    DEFAULT_RECIPIENT_DISCORD="alarms"
+    ``` 
 
 - vérifiez le bon fonctionnement de l'alerting sur Discord
-  ```bash
-  [yrlan@web ~]$ sudo su -s /bin/bash netdata
-  bash-4.4$ export NETDATA_ALARM_NOTIFY_DEBUG=1
-  bash-4.4$ /opt/netdata/usr/libexec/netdata/plugins.d/alarm-notify.sh test
-  [...]
-  --- END curl command ---
-  --- BEGIN received response ---
-  ok
-  --- END received response ---
-  RECEIVED HTTP RESPONSE CODE: 200
-  2021-10-12 01:32:50: alarm-notify.sh: INFO: sent discord notification for: web.tp2.linux test.chart.test_alarm is CLEAR to 'alarms'
-  # OK
-  ```
+```
+[yrlan@web ~]$ sudo su -s /bin/bash netdata
+bash-4.4$ export NETDATA_ALARM_NOTIFY_DEBUG=1
+bash-4.4$ /opt/netdata/usr/libexec/netdata/plugins.d/alarm-notify.sh test
+[...]
+--- END curl command ---
+--- BEGIN received response ---
+ok
+--- END received response ---
+RECEIVED HTTP RESPONSE CODE: 200
+2021-10-12 01:32:50: alarm-notify.sh: INFO: sent discord notification for: web.tp2.linux test.chart.test_alarm is CLEAR to 'alarms'
+# OK
+```
 
 # II. Backup
 
@@ -188,19 +189,18 @@ $ exit
 - **Créer un dossier `/srv/backup/`**
 - **Il contiendra un sous-dossier ppour chaque machine du parc**
     - **Commencez donc par créer le dossier `/srv/backup/web.tp2.linux/`**
-    ```bash
+    ```
     [yrlan@backup ~]$ sudo mkdir -p /srv/backup/web.tp2.linux/
     ```
+    
 - **Il existera un partage NFS pour chaque machine (principe du moindre privilège)**
-  ```bash
-  [yrlan@backup ~]$ sudo mkdir -p /srv/backup/db.tp2.linux/
-  ```
+
 
 #### **🌞 Setup partage NFS**
 
 - **Je crois que vous commencez à connaître la chanson... Google "nfs server rocky linux"**
   - [ce lien me semble être particulièrement simple et concis](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=1)
-```bash
+```
 [yrlan@backup ~]$ sudo dnf install -y nfs-utils
 [yrlan@backup ~]$ sudo vi /etc/idmapd.conf
 [yrlan@backup ~]$ sudo cat /etc/idmapd.conf | grep Domain
@@ -234,41 +234,43 @@ public (active)
 
 - [sur le même site, y'a ça](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=2)
 - **Monter le dossier `/srv/backups/web.tp2.linux` du serveur NFS dans le dossier `/srv/backup/` du serveur Web**
-  ```bash
-  [yrlan@web ~]$ sudo dnf -y install nfs-utils
-  [yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
-  Domain = tp2.linux
-  [yrlan@web ~]$ sudo mkdir /srv/backup
-  [yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
-  ```
+```
+[yrlan@web ~]$ sudo dnf -y install nfs-utils
+[yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
+Domain = tp2.linux
+[yrlan@web ~]$ sudo mkdir /srv/backup
+[yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
+```
+
 - **Vérifier...**
-  - **Avec une commande `mount` que la partition est bien montée**
-  ```bash
-  [yrlan@web ~]$ sudo mount | grep backup
-  backup.tp2.linux:/srv/backup/web.tp2.linux on /srv/backup type nfs4 (rw,relatime,vers=4.2,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.102.1.11,local_lock=none,addr=10.102.1.13)
-  ```
+    - **Avec une commande `mount` que la partition est bien montée**
+    ```
+    [yrlan@web ~]$ sudo mount | grep backup
+    backup.tp2.linux:/srv/backup/web.tp2.linux on /srv/backup type nfs4 (rw,relatime,vers=4.2,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.102.1.11,local_lock=none,addr=10.102.1.13)
+    ```
 
-  - Avec une commande `df -h` qu'il reste de la place
-  ```bash
-  [yrlan@web ~]$ sudo df -h | grep backup
-  backup.tp2.linux:/srv/backup/web.tp2.linux  6.2G  2.2G  4.1G  35% /srv/backup
-  ```
+    - Avec une commande `df -h` qu'il reste de la place
+    ```
+    [yrlan@web ~]$ sudo df -h | grep backup
+    backup.tp2.linux:/srv/backup/web.tp2.linux  6.2G  2.2G  4.1G  35% /srv/backup
+    ```
 
-  - **Avec une commande `touch` que vous avez le droit d'écrire dans cette partition**
-  ```bash
-  # Création d'un fichier `testttt` dans /srv/backup
-  [yrlan@web ~]$ sudo touch /srv/backup/testttt
-  [yrlan@web ~]$ sudo ls -l /srv/backup/
-  total 0
-  -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
-  
-  # Il apparait bien dans le dossier /srv/backup/web.tp2.linux/ sur la machine backup
-  [yrlan@backup ~]$ ls -l /srv/backup/web.tp2.linux/
-  total 0
-  -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
-  ```
+    - **Avec une commande `touch` que vous avez le droit d'écrire dans cette partition**
+    ```
+    # Création d'un fichier `testttt` dans /srv/backup
+    [yrlan@web ~]$ sudo touch /srv/backup/testttt
+    [yrlan@web ~]$ sudo ls -l /srv/backup/
+    total 0
+    -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
+    
+    # Il apparait bien dans le dossier /srv/backup/web.tp2.linux/ sur la machine backup
+    [yrlan@backup ~]$ ls -l /srv/backup/web.tp2.linux/
+    total 0
+    -rw-r--r--. 1 root root 0 Oct 12 03:22 testttt
+    ```
+
 - **Faites en sorte que cette partition se monte automatiquement grâce au fichier `/etc/fstab`**
-    ```bash
+    ```
     [yrlan@web ~]$ sudo vi /etc/fstab
     [yrlan@web ~]$ sudo cat /etc/fstab | grep backup
     backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup nfs defaults 0 0
@@ -278,7 +280,7 @@ public (active)
     [yrlan@web ~]$ sudo mount -av | grep /srv/backup
     /srv/backup              : successfully mounted
     ```
-  
+    
 #### **🌟 BONUS : partitionnement avec LVM**
 
 - **Ajoutez un disque à la VM `backup.tp2.linux` (disque = sdb)**
@@ -376,26 +378,6 @@ backup.tp2.linux:/srv/backup/db.tp2.linux  4.9G   20M  4.6G   1% /srv/backup
 
 ## **3. Backup de fichiers**
 
-**Un peu de scripting `bash` !** Le scripting est le meilleur ami de l'admin, vous allez pas y couper hihi.  
-
-La syntaxe de `bash` est TRES particulière, mais ce que je vous demande de réaliser là est un script minimaliste.
-
-Votre script **DEVRA**...
-
-- comporter un shebang
-- comporter un commentaire en en-tête qui indique le but du script, en quelques mots
-- comporter un commentaire qui indique l'auteur et la date d'écriture du script
-
-Par exemple :
-
-```bash
-#!/bin/bash
-# Simple backup script
-# it4 - 09/10/2021
-
-...
-```
-
 🌞 **Rédiger le script de backup `/srv/tp2_backup.sh`**
 
 - le script crée une archive compressée `.tar.gz` du dossier ciblé
@@ -405,22 +387,73 @@ Par exemple :
   - ces infos sont déterminées dynamiquement au moment où le script s'exécute à l'aide de la commande `date`
 - le script utilise la commande `rsync` afin d'envoyer la sauvegarde dans le dossier de destination
 - il **DOIT** pouvoir être appelé de la sorte :
+    ```
+    $ ./tp2_backup.sh <DESTINATION> <DOSSIER_A_BACKUP>
+    ```
 
-```bash
-$ ./tp2_backup.sh <DESTINATION> <DOSSIER_A_BACKUP>
-```
+    ```bash
+    #!/bin/bash
+    # Simple backup script
+    # Yrlan - 12/10/2021
 
-📁 **Fichier `/srv/tp2_backup.sh`**
+    destination=$1
+    folder2backup=$2
 
-> **Il est strictement hors de question d'utiliser `sudo` dans le contenu d'un script.**  
-Il est envisageable, en revanche, que le script doive être lancé avec root ou la commande `sudo` afin d'obtenir des droits élevés pendant son exécution.
+    if [ -z "$destination" ]; then
 
-🌞 **Tester le bon fonctionnement**
+      echo "Donnez le nom de dossier en tant qu'argument."
+      exit 0
+    fi
 
-- exécuter le script sur le dossier de votre choix
-- prouvez que la backup s'est bien exécutée
+
+    if [ -d "$destination" ]; then
+            filename="${folder2backup}_$(date '+%y-%m-%d_%H-%M-%S').tar.gz"
+            tar -czf "$filename" "$folder2backup"
+            rsync -av $filename $destination
+            echo "Archive successfully created."
+            else
+            echo "ATTENTION: Le dossier de destination n'existe pas: $destination"
+
+    fi
+    ```
+    
+> 📁 **[Fichier `/srv/tp2_backup.sh`](./script/tp2_backup.sh)**
+
+#### *🌞 Tester le bon fonctionnement**
+
+- **exécuter le script sur le dossier de votre choix**
+    ```
+    [yrlan@backup ~]$ sudo bash -x /srv/tp2_backup.sh /srv/backup/Archives/ /srv/backup/web.tp2.linux
+
+    + destination=/srv/backup/Archives/
+    + folder2backup=/srv/backup/web.tp2.linux
+    + '[' -z /srv/backup/Archives/ ']'
+    + '[' -d /srv/backup/Archives/ ']'
+    ++ date +%y-%m-%d_%H-%M-%S
+    + filename=/srv/backup/web.tp2.linux_21-10-24_23-07-47.tar.gz
+    + tar -czf /srv/backup/web.tp2.linux_21-10-24_23-07-47.tar.gz /srv/backup/web.tp2.linux
+    tar: Removing leading `/' from member names
+    + rsync -av /srv/backup/web.tp2.linux_21-10-24_23-07-47.tar.gz /srv/backup/Archives/
+    sending incremental file list
+    web.tp2.linux_21-10-24_23-07-47.tar.gz
+
+    sent 289 bytes  received 35 bytes  648.00 bytes/sec
+    total size is 166  speedup is 0.51
+    + echo 'Archive successfully created.'
+    Archive successfully created.
+    ```
+- **prouvez que la backup s'est bien exécutée**
+    ```
+    [yrlan@backup backup]$ ls -l Archives/ | grep web.tp2.linux_21-10-24_23-07-47.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:07 web.tp2.linux_21-10-24_23-07-47.tar.gz
+    ```
 - **tester de restaurer les données**
   - récupérer l'archive générée, et vérifier son contenu
+    ```
+    [yrlan@backup backup]$ ls -l srv/backup/web.tp2.linux/
+    total 0
+    -rw-r--r--. 1 root root 0 Oct 12 16:55 testfile
+    ```
 
 🌟 **BONUS**
 
@@ -454,6 +487,10 @@ Ensuite on créera un *timer systemd* qui permettra de déclencher le lancement 
 - c'est juste un fichier texte hein
 - doit se trouver dans le dossier `/etc/systemd/system/`
 - doit s'appeler `tp2_backup.service`
+```
+[yrlan@backup ~]$ sudo nano /etc/systemd/system/tp2_backup.service
+```
+
 - le contenu :
 
 ```bash
@@ -461,7 +498,8 @@ Ensuite on créera un *timer systemd* qui permettra de déclencher le lancement 
 Description=Our own lil backup service (TP2)
 
 [Service]
-ExecStart=/srv/tp2_backup.sh <DESTINATION> <DOSSIER>
+ExecStart=/srv/tp2_backup.sh /srv/backup/Archives /srv/backup/web.tp2.linux
+ExecStart=/srv/tp2_backup.sh /srv/backup/Archives /srv/backup/db.tp2.linux
 Type=oneshot
 RemainAfterExit=no
 
@@ -477,7 +515,13 @@ WantedBy=multi-user.target
 - essayez d'effectuer une sauvegarde avec `sudo systemctl start backup`
 - prouvez que la backup s'est bien exécutée
   - vérifiez la présence de la nouvelle archive
-
+    ```
+    [yrlan@backup backup]$ sudo systemctl start tp2_backup
+    [yrlan@backup backup]$ ls -l Archives/
+    total 8
+    -rw-r--r--. 1 root root 126 Oct 24 23:19 db.tp2.linux_21-10-24_23-19-52.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:19 web.tp2.linux_21-10-24_23-19-52.tar.gz
+    ```
 ---
 
 ### B. Timer
@@ -490,49 +534,101 @@ Un *timer systemd* permet l'exécution d'un *service* à intervalles réguliers.
 - dans le dossier `/etc/systemd/system/` aussi
 - fichier `tp2_backup.timer`
 - contenu du fichier :
+    ```bash
+    [yrlan@backup backup]$ sudo cat /etc/systemd/system/tp2_backup.timer
 
-```bash
-[Unit]
-Description=Periodically run our TP2 backup script
-Requires=tp2_backup.service
+    [Unit]
+    Description=Periodically run our TP2 backup script
+    Requires=tp2_backup.service
 
-[Timer]
-Unit=tp2_backup.service
-OnCalendar=*-*-* *:*:00
+    [Timer]
+    Unit=tp2_backup.service
+    OnCalendar=*-*-* *:*:00
 
-[Install]
-WantedBy=timers.target
-```
+    [Install]
+    WantedBy=timers.target
+    [yrlan@backup backup]$
+    ```
 
 > Le nom du *timer* doit être rigoureusement identique à celui du *service*. Seule l'extension change : de `.service` à `.timer`. C'est notamment grâce au nom identique que systemd sait que ce *timer* correspond à un *service* précis.
 
-🌞 **Activez le timer**
+#### **🌞 Activez le timer**
 
-- démarrer le *timer* : `sudo systemctl start tp2_backup.timer`
-- activer le au démarrage avec une autre commande `systemctl`
-- prouver que...
-  - le *timer* est actif actuellement
-  - qu'il est paramétré pour être actif dès que le système boot
+- **démarrer le *timer* : `sudo systemctl start tp2_backup.timer`**
+- **activer le au démarrage avec une autre commande `systemctl` :**
+    ```
+    [yrlan@backup srv]$ sudo systemctl enable tp2_backup.timer
+    Created symlink /etc/systemd/system/timers.target.wants/tp2_backup.timer → /etc/systemd/system/tp2_backup.timer.
+    ```
+- **prouver que...**
+  - **le *timer* est actif actuellement** = `Active: active`
+  - **qu'il est paramétré pour être actif dès que le système boot** = `Loaded: loaded (/etc/systemd/system/tp2_backup.timer; enabled`
+    ```
+    [yrlan@backup srv]$ sudo systemctl status tp2_backup.timer
+    ● tp2_backup.timer - Periodically run our TP2 backup script
+       Loaded: loaded (/etc/systemd/system/tp2_backup.timer; enabled; vendor preset: disabled)
+       Active: active (waiting) since Sun 2021-10-24 23:22:53 CEST; 1min 0s ago
+      Trigger: Sun 2021-10-24 23:24:00 CEST; 6s left
 
-🌞 **Tests !**
+    Oct 24 23:22:53 backup.tp2.linux systemd[1]: Started Periodically run our TP2 backup script.
+    ```
+    
+#### **🌞 Tests !**
 
-- avec la ligne `OnCalendar=*-*-* *:*:00`, le *timer* déclenche l'exécution du *service* toutes les minutes
-- vérifiez que la backup s'exécute correctement
+- **avec la ligne `OnCalendar=*-*-* *:*:00`, le *timer* déclenche l'exécution du *service* toutes les minutes**
+- **vérifiez que la backup s'exécute correctement**
+    ```
+    [yrlan@backup backup]$ ls -l Archives/
+    total 40
+    -rw-r--r--. 1 root root 126 Oct 24 23:19 db.tp2.linux_21-10-24_23-19-52.tar.gz
+    -rw-r--r--. 1 root root 126 Oct 24 23:22 db.tp2.linux_21-10-24_23-22-53.tar.gz
+    -rw-r--r--. 1 root root 126 Oct 24 23:23 db.tp2.linux_21-10-24_23-23-03.tar.gz
+    -rw-r--r--. 1 root root 126 Oct 24 23:24 db.tp2.linux_21-10-24_23-24-03.tar.gz
+    -rw-r--r--. 1 root root 126 Oct 24 23:25 db.tp2.linux_21-10-24_23-25-03.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:19 web.tp2.linux_21-10-24_23-19-52.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:22 web.tp2.linux_21-10-24_23-22-53.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:23 web.tp2.linux_21-10-24_23-23-03.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:24 web.tp2.linux_21-10-24_23-24-03.tar.gz
+    -rw-r--r--. 1 root root 166 Oct 24 23:25 web.tp2.linux_21-10-24_23-25-03.tar.gz
+    ```
 
 ---
 
 ### C. Contexte
 
-🌞 **Faites en sorte que...**
+#### **🌞 Faites en sorte que...**
 
-- votre backup s'exécute sur la machine `web.tp2.linux`
-- le dossier sauvegardé est celui qui contient le site NextCloud (quelque part dans `/var/`)
-- la destination est le dossier NFS monté depuis le serveur `backup.tp2.linux`
-- la sauvegarde s'exécute tous les jours à 03h15 du matin
-- prouvez avec la commande `sudo systemctl list-timers` que votre *service* va bien s'exécuter la prochaine fois qu'il sera 03h15
+- **votre backup s'exécute sur la machine `web.tp2.linux`**
+- **le dossier sauvegardé est celui qui contient le site NextCloud (quelque part dans `/var/`)**
+- **la destination est le dossier NFS monté depuis le serveur `backup.tp2.linux`**
+    ```
+    [yrlan@web nextcloud]$ sudo mount | grep backup
+    backup.tp2.linux:/srv/backup/web.tp2.linux on /var/www/sub-domains/web.tp2.linux type nfs4
 
-📁 **Fichier `/etc/systemd/system/tp2_backup.timer`**  
-📁 **Fichier `/etc/systemd/system/tp2_backup.service`**
+    [yrlan@backup backup]$ sudo systemctl start tp2_backup
+    [yrlan@backup backup]$ ls -l Archives/
+    total 142312
+    -rw-r--r--. 1 root root 145725914 Oct 25 00:04 web.tp2.linux_21-10-25_00-03-41.tar.gz
+    ```
+- **la sauvegarde s'exécute tous les jours à 03h15 du matin**
+    ```
+    [yrlan@backup backup]$ sudo cat /etc/systemd/system/tp2_backup.timer | grep "OnCalendar"
+    OnCalendar=*-*-* 3:15:00
+    ```
+- **prouvez avec la commande `sudo systemctl list-timers` que votre *service* va bien s'exécuter la prochaine fois qu'il sera 03h15**
+    ```
+    [yrlan@backup backup]$ sudo systemctl list-timers
+    NEXT                          LEFT         LAST                          PASSED      UNIT                         ACTIVATES
+    Mon 2021-10-25 00:29:33 CEST  16min left   Sun 2021-10-24 23:09:03 CEST  1h 3min ago dnf-makecache.timer          dnf-makecache.service
+    Mon 2021-10-25 03:15:00 CEST  3h 2min left n/a                           n/a         tp2_backup.timer             tp2_backup.service
+    Mon 2021-10-25 23:11:03 CEST  22h left     Sun 2021-10-24 23:11:03 CEST  1h 1min ago systemd-tmpfiles-clean.timer systemd-tmpfiles-clean.service
+
+    3 timers listed.
+    Pass --all to see loaded but inactive timers, too.
+    ```
+
+**[📁 Fichier `/etc/systemd/system/tp2_backup.timer`](./service/tp2_backup.timer)**  
+**[📁 Fichier `/etc/systemd/system/tp2_backup.service`](./service/tp2_backup.service)**
 
 ## 5. Backup de base de données
 
@@ -583,35 +679,6 @@ A ce stade vous avez :
 
 # III. Reverse Proxy
 
-## 1. Introooooo
-
-Un *reverse proxy* est un outil qui sert d'intermédiaire entre le client et un serveur donné (souvent un serveur Web).
-
-**C'est l'admin qui le met en place, afin de protéger l'accès au serveur Web.**
-
-Une fois en place, le client devra saisir l'IP (ou le nom) du *reverse proxy* pour accéder à l'application Web (ce ne sera plus directement l'IP du serveur Web).
-
-Un *reverse proxy* peut permettre plusieurs choses :
-
-- chiffrement
-  - c'est lui qui mettra le HTTPS en place (protocole HTTP + chiffrement avec le protocole TLS)
-  - on pourrait le faire directement avec le serveur Web (Apache) dans notre cas
-  - pour de meilleures performances, il est préférable de dédier une machine au chiffrement HTTPS, et de laisser au serveur web un unique job : traiter les requêtes HTTP
-- répartition de charge
-  - plutôt qu'avoir un seul serveur Web, on peut en setup plusieurs
-  - ils hébergent tous la même application
-  - le *reverse proxy* enverra les clients sur l'un ou l'autre des serveurs Web, afin de répartir la charge à traiter
-- d'autres trucs
-  - caching de ressources statiques (CSS, JSS, images, etc.)
-  - tolérance de pannes
-  - ...
-
----
-
-**Dans ce TP on va setup un reverse proxy NGINX très simpliste.**
-
-![Apache at the back hihi](./pics/nginx-at-the-front-apache-at-the-back.jpg)
-
 ## 2. Setup simple
 
 | Machine            | IP            | Service                 | Port ouvert | IPs autorisées |
@@ -621,57 +688,148 @@ Un *reverse proxy* peut permettre plusieurs choses :
 | `backup.tp2.linux` | `10.102.1.13` | Serveur de Backup (NFS) | ?           | ?             |
 | `front.tp2.linux`  | `10.102.1.14` | Reverse Proxy           | ?           | ?             |
 
-🖥️ **VM `front.tp2.linu`x**
+> **🖥️ VM `front.tp2.linu`x**
 
 **Déroulez la [📝**checklist**📝](#checklist) sur cette VM.**
 
-🌞 **Installer NGINX**
+#### **🌞 Installer NGINX**
 
-- vous devrez d'abord installer le paquet `epel-release` avant d'installer `nginx`
-  - EPEL c'est des dépôts additionnels pour Rocky
-  - NGINX n'est pas présent dans les dépôts par défaut que connaît Rocky
-- le fichier de conf principal de NGINX est `/etc/nginx/nginx.conf`
+- **Vous devrez d'abord installer le paquet `epel-release` avant d'installer `nginx`**
+    - EPEL c'est des dépôts additionnels pour Rocky
+    - NGINX n'est pas présent dans les dépôts par défaut que connaît Rocky
+    ```
+    [yrlan@front ~]$ sudo dnf install -y epel-release;sudo dnf install -y nginx
+    ```
+- **Le fichier de conf principal de NGINX est `/etc/nginx/nginx.conf`**
+    ```
+    [yrlan@front ~]$ head -8 /etc/nginx/nginx.conf
+    # For more information on configuration, see:
+    #   * Official English Documentation: http://nginx.org/en/docs/
+    #   * Official Russian Documentation: http://nginx.org/ru/docs/
 
-🌞 **Tester !**
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log;
+    pid /run/nginx.pid;
+    ```
 
-- lancer le *service* `nginx`
-- le paramétrer pour qu'il démarre seul quand le système boot
-- repérer le port qu'utilise NGINX par défaut, pour l'ouvrir dans le firewall
-- vérifier que vous pouvez joindre NGINX avec une commande `curl` depuis votre PC
+#### **🌞 Tester !**
 
-🌞 **Explorer la conf par défaut de NGINX**
+- **lancer le *service* `nginx`**
+- **le paramétrer pour qu'il démarre seul quand le système boot**
+    ```
+    [yrlan@front ~]$ sudo systemctl start nginx
+    [yrlan@front ~]$ sudo systemctl enable nginx
+    Created symlink /etc/systemd/system/multi-user.target.wants/nginx.service → /usr/lib/systemd/system/nginx.service.
+    [yrlan@front ~]$ sudo systemctl is-active nginx
+    active
+    [yrlan@front ~]$ sudo systemctl is-enabled nginx
+    enabled
+    ```
+- **repérer le port qu'utilise NGINX par défaut, pour l'ouvrir dans le firewall**
+```
+[yrlan@front ~]$ sudo ss -alnpt | grep nginx
+LISTEN 0      128          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=4046,fd=8),("nginx",pid=4045,fd=8))
+LISTEN 0      128             [::]:80           [::]:*    users:(("nginx",pid=4046,fd=9),("nginx",pid=4045,fd=9))
 
-- repérez l'utilisateur qu'utilise NGINX par défaut
-- dans la conf NGINX, on utilise le mot-clé `server` pour ajouter un nouveau site
-  - repérez le bloc `server {}` dans le fichier de conf principal
-- par défaut, le fichier de conf principal inclut d'autres fichiers de conf
-  - mettez en évidence ces lignes d'inclusion dans le fichier de conf principal
-
-🌞 **Modifier la conf de NGINX**
-
-- pour que ça fonctionne, le fichier `/etc/hosts` de la machine **DOIT** être rempli correctement, conformément à la **[📝**checklist**📝](#checklist)**
-- supprimer le bloc `server {}` par défaut, pour ne plus présenter la page d'accueil NGINX
-- créer un fichier `/etc/nginx/conf.d/web.tp2.linux.conf` avec le contenu suivant :
-  - j'ai sur-commenté pour vous expliquer les lignes, n'hésitez pas à dégommer mes lignes de commentaires
-
-```bash
-[it4@localhost nginx]$ cat conf.d/web.tp2.linux.conf 
-server {
-    # on demande à NGINX d'écouter sur le port 80 pour notre NextCloud
-    listen 80;
-
-    # ici, c'est le nom de domaine utilisé pour joindre l'application
-    # ce n'est pas le nom du reverse proxy, mais le nom que les clients devront saisir pour atteindre le site
-    server_name web.tp2.linux; # ici, c'est le nom de domaine utilisé pour joindre l'application (pas forcéme
-
-    # on définit un comportement quand la personne visite la racine du site (http://web.tp2.linux/)
-    location / {
-        # on renvoie tout le trafic vers la machine web.tp2.linux
-        proxy_pass http://web.tp2.linux;
-    }
-}
+[yrlan@front ~]$ sudo firewall-cmd --add-port=80/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
+success
+success
+success
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp0s3 enp0s8
+  sources:
+  services: ssh
+  ports: 80/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
 ```
 
+- vérifier que vous pouvez joindre NGINX avec une commande `curl` depuis votre PC
+```
+PS C:\Users\yrlan> curl 10.102.1.14:80
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>Test Page for the Nginx HTTP Server on Rocky Linux</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    [...]
+  </body>
+</html>
+```
+
+
+#### **🌞 Explorer la conf par défaut de NGINX**
+
+- **Repérez l'utilisateur qu'utilise NGINX par défaut**
+    ```
+    [yrlan@front ~]$ sudo ps -ef | grep nginx
+    root        4045       1  0 00:41 ?        00:00:00 nginx: master process /usr/sbin/nginx
+    nginx       4046    4045  0 00:41 ?        00:00:00 nginx: worker process
+    ```
+- **Dans la conf NGINX, on utilise le mot-clé `server` pour ajouter un nouveau site**
+    - **Repérez le bloc `server {}` dans le fichier de conf principal**
+    ```
+    [yrlan@front ~]$ sudo cat /etc/nginx/nginx.conf
+    [...]
+    server {
+        listen       80 default_server;
+        listen       [::]:80 default_server;
+        server_name  _;
+        root         /usr/share/nginx/html;
+    [...]
+    ```
+- **Par défaut, le fichier de conf principal inclut d'autres fichiers de conf**
+    - **Mettez en évidence ces lignes d'inclusion dans le fichier de conf principal**
+    ```
+    [yrlan@front ~]$ sudo cat /etc/nginx/nginx.conf | grep include
+    include /usr/share/nginx/modules/*.conf;
+        include             /etc/nginx/mime.types;
+        # See http://nginx.org/en/docs/ngx_core_module.html#include
+        include /etc/nginx/conf.d/*.conf;
+            include /etc/nginx/default.d/*.conf;
+    #        include /etc/nginx/default.d/*.conf;
+    ```
+
+
+#### **🌞 Modifier la conf de NGINX**
+
+- **Pour que ça fonctionne, le fichier `/etc/hosts` de la machine DOIT être rempli correctement, conformément à la** **[📝**checklist**📝](#checklist)**
+- **Supprimer le bloc `server {}` par défaut, pour ne plus présenter la page d'accueil NGINX**
+- **Créer un fichier `/etc/nginx/conf.d/web.tp2.linux.conf` avec le contenu suivant :**
+  - **J'ai sur-commenté pour vous expliquer les lignes, n'hésitez pas à dégommer mes lignes de commentaires**
+    ```bash
+    [yrlan@front ~]$ sudo cat /etc/nginx/conf.d/web.tp2.linux.conf
+    server {
+        listen 80;
+
+        server_name web.tp2.linux;
+
+        location / {
+            proxy_pass http://web.tp2.linux;
+        }
+    }
+    
+    # Vérifications, c'est bien l'interface de nextcloud qui s'affiche
+    [yrlan@front ~]$ curl http://10.102.1.14/index.php
+    <!DOCTYPE html>
+    <html class="ng-csp" data-placeholder-focus="false" lang="en" data-locale="en" >
+            <head
+     data-requesttoken="BsKY0nCYJj157Ym/P1/lpO3y/jvhBXn4sl7kFI/boh8=:VIrSpETcUmtK3LjRXG68z6yrxgyZcjyBwjq+cf6L5jA=">
+                    <meta charset="utf-8">
+                    <title>
+                    Nextcloud               
+                    </title>
+                    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                    [...]
+    ```
 ## 3. Bonus HTTPS
 
 **Etape bonus** : mettre en place du chiffrement pour que nos clients accèdent au site de façon plus sécurisée.
@@ -681,59 +839,79 @@ server {
 - il existe plein de façons de faire
 - nous allons générer en une commande la clé et le certificat
 - puis placer la clé et le cert dans les endroits standards pour la distribution Rocky Linux
-
-```bash
-# On se déplace dans un dossier où on peut écrire
-$ cd ~
-
-# Génération de la clé et du certificat
-# Attention à bien saisir le nom du site pour le "Common Name"
-$ openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout server.key -out server.crt
-[...]
-Common Name (eg, your name or your server\'s hostname) []:web.tp2.linux
-[...]
-
-# On déplace la clé et le certificat dans les dossiers standards sur Rocky
-# En le renommant
-$ sudo mv server.key /etc/pki/tls/private/web.tp2.linux.key
-$ sudo mv server.crt /etc/pki/tls/certs/web.tp2.linux.crt
-
-# Setup des permissions restrictives
-$ sudo chown root:root /etc/pki/tls/private/web.tp2.linux.key
-$ sudo chown root:root /etc/pki/tls/certs/web.tp2.linux.crt
-$ sudo chmod 400 /etc/pki/tls/private/web.tp2.linux.key
-$ sudo chmod 644 /etc/pki/tls/certs/web.tp2.linux.crt
-```
+    ```
+    [yrlan@front ~]$ openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout server.key -out server.crt
+    Generating a RSA private key
+    ..........................................+++++
+    ...............................................................................................+++++
+    writing new private key to 'server.key'
+    -----
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [XX]:
+    State or Province Name (full name) []:
+    Locality Name (eg, city) [Default City]:
+    Organization Name (eg, company) [Default Company Ltd]:
+    Organizational Unit Name (eg, section) []:
+    Common Name (eg, your name or your server's hostname) []:web.tp2.linux
+    Email Address []:
+    ```
 
 🌟 **Modifier la conf de NGINX**
 
-- inspirez-vous de ce que vous trouvez sur internet
-- il n'y a que deux lignes à ajouter
-  - une ligne pour préciser le chemin du certificat
-  - une ligne pour préciser le chemin de la clé
-- et une ligne à modifier
-  - préciser qu'on écoute sur le port 443, avec du chiffrement
-- n'oubliez pas d'ouvrir le port 443/tcp dans le firewall
+- **inspirez-vous de ce que vous trouvez sur internet**
+```
+[yrlan@front ~]$ sudo mv server.key /etc/nginx/ssl
+[yrlan@front ~]$ sudo mv server.crt /etc/nginx/ssl
+```
+- **il n'y a que deux lignes à ajouter**
+  - **une ligne pour préciser le chemin du certificat**
+    ```
+    ssl_certificate     ssl/server.crt
+    ```
+  - **une ligne pour préciser le chemin de la clé**
+    ```
+    ssl_certificate_key ssl/server.key
+    ```
+- **et une ligne à modifier**
+  - **préciser qu'on écoute sur le port 443, avec du chiffrement**
+    ```
+    listen 443 ssl;
+    ```
+- **n'oubliez pas d'ouvrir le port 443/tcp dans le firewall**
+    ```
+    [yrlan@front ~]$ sudo firewall-cmd --add-port=443/tcp --permanent; sudo firewall-cmd --remove-port=80/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
+    success
+    success
+    success
+    public (active)
+      target: default
+      icmp-block-inversion: no
+      interfaces: enp0s3 enp0s8
+      sources:
+      services: ssh
+      ports: 443/tcp
+      protocols:
+      masquerade: no
+      forward-ports:
+      source-ports:
+      icmp-blocks:
+      rich rules:
+    ```
 
-🌟 **TEST**
+#### **🌟 TEST**
 
-- connectez-vous sur `https://web.tp2.linux` depuis votre PC
-- petite avertissement de sécu : normal, on a signé nous-mêmes le certificat
-  - vous pouvez donc "Accepter le risque" (le nom du bouton va changer suivant votre navigateur)
-  - avec `curl` il faut ajouter l'option `-k` pour désactiver cette vérification
+- **connectez-vous sur `https://web.tp2.linux` depuis votre PC**
+- **petite avertissement de sécu : normal, on a signé nous-mêmes le certificat**
+  - **vous pouvez donc "Accepter le risque" (le nom du bouton va changer suivant votre navigateur)**
+  - **avec `curl` il faut ajouter l'option `-k` pour désactiver cette vérification**
 
 # IV. Firewalling
-
-**On va rendre nos firewalls un peu plus agressifs.**
-
-Actuellement je vous ai juste demandé d'autoriser le trafic sur tel ou tel port. C'est bien.
-
-**Maintenant on va restreindre le trafic niveau IP aussi.**
-
-Par exemple : notre base de données `db.tp2.linux` n'est accédée que par le serveur Web `web.tp2.linux`, et par aucune autre machine.  
-On va donc configurer le firewall de la base de données pour qu'elle n'accepte QUE le trafic qui vient du serveur Web.
-
-**On va *harden* ("durcir" en français) la configuration de nos firewalls.**
 
 ## 1. Présentation de la syntaxe
 
@@ -769,7 +947,6 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
 
 > *L'utilisation de la notation `IP/32` permet de cibler une IP spécifique. Si on met le vrai masque `10.102.1.1/24` par exemple, on autorise TOUT le réseau `10.102.1.0/24`, et non pas un seul hôte. Ce `/32` c'est un truc qu'on voit souvent en réseau, pour faire référence à une IP unique.*
 
-![Cut here to activate firewall :D](./pics/cut-here-to-activate-firewall-best-label-for-lan-cable.jpg)
 
 ## 2. Mise en place
 
@@ -777,53 +954,312 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
 
 🌞 **Restreindre l'accès à la base de données `db.tp2.linux`**
 
-- seul le serveur Web doit pouvoir joindre la base de données sur le port 3306/tcp
-- vous devez aussi autoriser votre accès SSH
-- n'hésitez pas à multiplier les zones (une zone `ssh` et une zone `db` par exemple)
+- **Seul le serveur Web doit pouvoir joindre la base de données sur le port 3306/tcp**
+    ```
+    [yrlan@db ~]$ sudo firewall-cmd --set-default-zone=drop
+    sucess
+    [yrlan@db ~]$ sudo firewall-cmd --new-zone=db --permanent; sudo firewall-cmd --zone=db --add-source=10.102.1.11/24 --permanent-; sudo firewall-cmd --zone=db --add-port=3306/tcp --permanent; sudo firewall-cmd --reload; 
+    success
+    success
+    success
+    success
+    ```
+- **Vous devez aussi autoriser votre accès SSH**
+    ```
+    sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/24 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    success
+    success
+    success
+    success
+    ```
+- **N'hésitez pas à multiplier les zones (une zone `ssh` et une zone `db` par exemple)**
 
-> Quand vous faites une connexion SSH, vous la faites sur l'interface Host-Only des VMs. Cette interface est branchée à un Switch qui porte le nom du Host-Only. Pour rappel, votre PC a aussi une interface branchée à ce Switch Host-Only.  
-C'est depuis cette IP que la VM voit votre connexion. C'est cette IP que vous devez autoriser dans le firewall de votre VM pour SSH.
-
-🌞 **Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
-
-- `sudo firewall-cmd --get-active-zones`
-- `sudo firewall-cmd --get-default-zone`
-- `sudo firewall-cmd --list-all --zone=?`
+#### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+```
+[yrlan@db ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all; sudo firewall-cmd --list-all --zone=db;sudo firewall-cmd --list-all --zone=ssh
+drop
+db
+  sources: 10.102.1.11/24
+drop
+  interfaces: enp0s8 enp0s3
+ssh
+  sources: 10.102.1.1/24
+drop (active)
+  target: DROP
+  icmp-block-inversion: no
+  interfaces: enp0s3 enp0s8
+  sources:
+  services:
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+db (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.11/24
+  services:
+  ports: 3306/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+ssh (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.1/24
+  services:
+  ports: 22/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+```
 
 ### B. Serveur Web
 
-🌞 **Restreindre l'accès au serveur Web `web.tp2.linux`**
+#### **🌞 Restreindre l'accès au serveur Web `web.tp2.linux`**
 
-- seul le reverse proxy `front.tp2.linux` doit accéder au serveur web sur le port 80
-- n'oubliez pas votre accès SSH
+- **seul le reverse proxy `front.tp2.linux` doit accéder au serveur web sur le port 80**
+    ```
+    [yrlan@web ~]$ sudo firewall-cmd --set-default-zone=drop
+    [yrlan@web ~]$ sudo firewall-cmd --new-zone=web --permanent; sudo firewall-cmd --zone=web --add-source=10.102.1.14/24 --permanent; sudo firewall-cmd --zone=web --add-port=80/tcp --permanent; sudo firewall-cmd --reload;
+    success
+    success
+    success
+    success
+    ```
+- **n'oubliez pas votre accès SSH**
+    ```
+    [yrlan@web ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/24 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    success
+    success
+    success
+    success
+    ```
 
-🌞 **Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+#### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+```
+[yrlan@web ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all; sudo firewall-cmd --list-all --zone=web;sudo firewall-cmd --list-all --zone=ssh
+[sudo] password for yrlan:
+drop
+drop
+  interfaces: enp0s8 enp0s3
+ssh
+  sources: 10.102.1.1/24
+web
+  sources: 10.102.1.14/24
+drop (active)
+  target: DROP
+  icmp-block-inversion: no
+  interfaces: enp0s3 enp0s8
+  sources:
+  services:
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+web (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.14/24
+  services:
+  ports: 80/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+ssh (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.1/24
+  services:
+  ports: 22/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+```
 
 ### C. Serveur de backup
 
-🌞 **Restreindre l'accès au serveur de backup `backup.tp2.linux`**
+#### **🌞 Restreindre l'accès au serveur de backup `backup.tp2.linux`**
 
-- seules les machines qui effectuent des backups doivent être autorisées à contacter le serveur de backup *via* NFS
-- n'oubliez pas votre accès SSH
+- **Seules les machines qui effectuent des backups doivent être autorisées à contacter le serveur de backup *via* NFS**
+    ```
+    [yrlan@backup ~]$ sudo firewall-cmd --set-default-zone=drop
+    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=backups --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.11/24 --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.12/24 --permanent; sudo firewall-cmd --zone=backups --add-service=nfs --permanent; sudo firewall-cmd --reload;
+    success
+    success
+    success
+    success
+    ```
+- **N'oubliez pas votre accès SSH**
+    ```
+    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/24 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    success
+    success
+    success
+    success
+    ```
 
-🌞 **Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+#### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+```
+[yrlan@backup ~]$ sudo firewall-cmd --get-default-zone
+drop
+
+[yrlan@backup ~]$ sudo firewall-cmd --get-active-zones
+backups
+  sources: 10.102.1.11/24 10.102.1.12/24
+drop
+  interfaces: enp0s8 enp0s3
+ssh
+  sources: 10.102.1.1/24
+
+[yrlan@backup ~]$ sudo firewall-cmd --list-all --zone=drop; sudo firewall-cmd --list-all --zone=backups; sudo firewall-cmd --list-all --zone=ssh
+drop (active)
+  target: DROP
+  icmp-block-inversion: no
+  interfaces: enp0s3 enp0s8
+  sources:
+  services:
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+  
+backups (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.11/24 10.102.1.12/24
+  services: nfs
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+  
+ssh (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.1/24
+  services:
+  ports: 22/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+```
+
 
 ### D. Reverse Proxy
 
-🌞 **Restreindre l'accès au reverse proxy `front.tp2.linux`**
+#### **🌞 Restreindre l'accès au reverse proxy `front.tp2.linux`**
 
-- seules les machines du réseau `10.102.1.0/24` doivent pouvoir joindre le proxy
-- n'oubliez pas votre accès SSH
+- **Seules les machines du réseau `10.102.1.0/24` doivent pouvoir joindre le proxy**
+```
+[yrlan@front ~]$ sudo firewall-cmd --new-zone=proxy --permanent; sudo firewall-cmd --zone=proxy --add-source=10.102.1.0/24 --permanent; sudo firewall-cmd --zone=proxy --add-port=443/tcp --permanent; sudo firewall-cmd --reload;
+[sudo] password for yrlan:
+success
+success
+success
+success
+```
+- **N'oubliez pas votre accès SSH**
+    ```
+    [yrlan@front ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/24 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
+    success
+    success
+    success
+    success
+    ```
 
-🌞 **Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+#### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
+```
+[yrlan@front ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all; sudo firewall-cmd --list-all --zone=proxy;sudo firewall-cmd --list-all --zone=ssh
+drop
+drop
+  interfaces: enp0s8 enp0s3
+proxy
+  sources: 10.102.1.0/24
+ssh
+  sources: 10.102.1.1/24
+drop (active)
+  target: DROP
+  icmp-block-inversion: no
+  interfaces: enp0s3 enp0s8
+  sources:
+  services:
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+proxy (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.0/24
+  services:
+  ports: 443/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+ssh (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces:
+  sources: 10.102.1.1/24
+  services:
+  ports: 22/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+```
+
 
 ### E. Tableau récap
 
-🌞 **Rendez-moi le tableau suivant, correctement rempli :**
+#### **🌞 Rendez-moi le tableau suivant, correctement rempli :**
 
-| Machine            | IP            | Service                 | Port ouvert | IPs autorisées |
-|--------------------|---------------|-------------------------|-------------|---------------|
-| `web.tp2.linux`    | `10.102.1.11` | Serveur Web             | ?           | ?             |
-| `db.tp2.linux`     | `10.102.1.12` | Serveur Base de Données | ?           | ?             |
-| `backup.tp2.linux` | `10.102.1.13` | Serveur de Backup (NFS) | ?           | ?             |
-| `front.tp2.linux`  | `10.102.1.14` | Reverse Proxy           | ?           | ?             |
+| Machine            | IP            | Service                 | Port ouvert                             | IPs autorisées                    |
+|--------------------|---------------|-------------------------|-----------------------------------------|-----------------------------------|
+| `web.tp2.linux`    | `10.102.1.11` | Serveur Web             | `22/tcp`, `80/tcp`                      | `10.102.1.14/24`                  |
+| `db.tp2.linux`     | `10.102.1.12` | Serveur Base de Données | `22/tcp`, `3306/tcp`                    | `10.102.1.11/24`                  |
+| `backup.tp2.linux` | `10.102.1.13` | Serveur de Backup (NFS) | `22/tcp`, `111/tcp&udp`, `2049/tcp&udp` | `10.102.1.11/24` `10.102.1.12/24` |
+| `front.tp2.linux`  | `10.102.1.14` | Reverse Proxy           | `22/tcp`, `443/tcp`                     | `10.102.1.0/24`                   |
