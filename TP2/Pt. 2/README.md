@@ -672,7 +672,7 @@ Sauvegarder des dossiers c'est bien. Mais sauvegarder aussi les bases de donnée
 $ ./tp2_backup_db.sh <DESTINATION> <DATABASE>
 ```
 
-📁 **Fichier `/srv/tp2_backup_db.sh`**  
+**📁 Fichier `/srv/tp2_backup_db.sh`**  
 
 🌞 **Restauration**
 
@@ -680,15 +680,57 @@ $ ./tp2_backup_db.sh <DESTINATION> <DATABASE>
 - c'est à dire, une fois la sauvegarde effectuée, et le `tar.gz` en votre possession, tester que vous êtes capables de restaurer la base dans l'état au moment de la sauvegarde
   - il faut réinjecter le fichier `.sql` dans la base à l'aide d'une commmande `mysql`
 
-🌞 ***Unité de service***
+#### **🌞 Unité de service**
+- **Pareil que pour la sauvegarde des fichiers ! On va faire de ce script une *unité de service*.**
+- **Votre script `/srv/tp2_backup_db.sh` doit pouvoir se lancer grâce à un *service* `tp2_backup_db.service`**
+    ```bash
+    [yrlan@db ~]$ sudo cat /etc/systemd/system/tp2_backup_db.service
+    [Unit]
+    Description=Service de backup de base de donnée (TP2)
 
-- pareil que pour la sauvegarde des fichiers ! On va faire de ce script une *unité de service*.
-- votre script `/srv/tp2_backup_db.sh` doit pouvoir se lancer grâce à un *service* `tp2_backup_db.service`
-- le *service* est exécuté tous les jours à 03h30 grâce au *timer* `tp2_backup_db.timer`
-- prouvez le bon fonctionnement du *service* ET du *timer*
+    [Service]
+    ExecStart=sudo bash /srv/tp2_backup_db.sh /srv/backup/DBBackup/ nextcloud
+    Type=oneshot
+    RemainAfterExit=no
 
-📁 **Fichier `/etc/systemd/system/tp2_backup_db.timer`**  
-📁 **Fichier `/etc/systemd/system/tp2_backup_db.service`**
+    [Install]
+    WantedBy=multi-user.target
+
+    [yrlan@db ~]$ sudo systemctl start tp2_backup_db.service
+    [yrlan@db ~]$ ls /srv/backup/DBBackup
+    tp2_backup_21-10-25_00-12-21.tar.gz
+    ```
+- **Le service est exécuté tous les jours à 03h30 grâce au timer`tp2_backup_db.timer`**
+    ```bash
+    [yrlan@db ~]$ sudo cat /etc/systemd/system/tp2_backup_db.timer
+    Description=Lance le service de sauvegarde de base de donnée à 3h30
+    Requires=tp2_backup_db.service
+
+    [Timer]
+    Unit=tp2_backup_db.service
+    OnCalendar=*-*-* 3:30:00
+
+    [Install]
+    WantedBy=timers.target
+    ```
+- **Prouvez le bon fonctionnement du *service* ET du *timer***
+    ```bash
+    [yrlan@db ~]$ sudo systemctl daemon-reload
+    sudo systemctl start tp2_backup_db.timer
+    [yrlan@db ~]$ sudo systemctl enable tp2_backup_db.timer
+    Created symlink /etc/systemd/system/timers.target.wants/tp2_backup_db.timer → /etc/systemd/system/tp2_backup_db.timer.
+    [yrlan@db ~]$ sudo systemctl is-enabled tp2_backup_db.timer
+    enabled
+    [yrlan@db ~]$ sudo systemctl is-active tp2_backup_db.timer
+    active
+    
+    [yrlan@db ~]$ sudo systemctl list-timers
+    NEXT                          LEFT     LAST                          PASSED   UNIT                   >
+    Mon 2021-10-25 03:30:00 CEST  11h left n/a                           n/a      tp2_backup_db.timer    >
+    ```
+
+📁 **Fichier [`/etc/systemd/system/tp2_backup_db.timer`](./service/tp2_backup_db.timer)**  
+📁 **Fichier [`/etc/systemd/system/tp2_backup_db.service`](./service/tp2_backup_db.service)**
 
 ## 6. Petit point sur la backup
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Service de backup de base de donnée (TP2)
+
+[Service]
+ExecStart=sudo bash /srv/tp2_backup_db.sh /srv/backup/DBBackup/ nextcloud
+Type=oneshot
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
