@@ -82,8 +82,10 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
 - **Déterminer s'il est actif, et s'il est paramétré pour démarrer au boot de la machine**
   - Si ce n'est pas le cas, faites en sorte qu'il démarre au boot de la machine
     ```bash
+    # Vérifier s'il est démarré
     [yrlan@web ~]$ sudo systemctl is-active netdata
     active
+    # Vérifier s'il est activé au boot
     [yrlan@web ~]$ sudo systemctl is-enabled netdata
     enabled
     ```
@@ -91,15 +93,19 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
 - **Déterminer à l'aide d'une commande `ss` sur quel port Netdata écoute**
     - **Autoriser ce port dans le firewall**
     ```bash
+    # On repère sur quel port netdata écoute
     [yrlan@web ~]$ sudo ss -alnpt | grep netdata
     LISTEN 0      128        127.0.0.1:8125       0.0.0.0:*    users:(("netdata",pid=2305,fd=45))
     LISTEN 0      128          0.0.0.0:19999      0.0.0.0:*    users:(("netdata",pid=2305,fd=5))
     LISTEN 0      128            [::1]:8125          [::]:*    users:(("netdata",pid=2305,fd=44))
     LISTEN 0      128             [::]:19999         [::]:*    users:(("netdata",pid=2305,fd=6))
 
+    # Ajout des ports que netdata utilisent dans le pare-feu
     [yrlan@web ~]$ sudo firewall-cmd --add-port=19999/tcp --permanent; sudo firewall-cmd --add-port=8125/tcp --permanent
     success
     success
+    
+    # Actualisation du pare-feu + affichage des règles
     [yrlan@web ~]$ sudo firewall-cmd --reload; sudo firewall-cmd --list-all
     success
     public (active)
@@ -116,6 +122,7 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
       icmp-blocks:
       rich rules:
       
+    # Vérification depuis mon hôte powershell ( sur mon pc )
     PS C:\Users\yrlan> curl http://web.tp2.linux:19999/
     <!doctype html><html lang="en"><head><title>netdata dashboard</title>[...]</body></html>
     ```
@@ -172,40 +179,72 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
 
     
 
-# II. Backup
+# **II. Backup**
 
 🖥️ **VM `backup.tp2.linux`**
 
 **Déroulez la [📝**checklist**📝](#checklist) sur cette VM.**
 
-## 2. Partage NFS
+## **1. Intwo bwo**
 
-#### 🌞 **Setup environnement**
+**La backup consiste à extraire des données de leur emplacement original afin de les stocker dans un endroit dédié.**
+**Cet endroit dédié est un endroit sûr** : le but est d'assurer la perennité des données sauvegardées, tout en maintenant leur niveau de sécurité.
+Pour la sauvegarde, il existe plusieurs façon de procéder. Pour notre part, nous allons procéder comme suit :
+
+
+- **création d'un serveur de stockage**
+	- il hébergera les sauvegardes de tout le monde
+	- ce sera notre "endroit sûr"
+	- ce sera un partage NFS
+	- ainsi, toutes les machines qui en ont besoin pourront accéder à un dossier qui leur est dédié sur ce serveur de stockage, afin d'y stocker leurs sauvegardes
+- **développement d'un script de backup**
+    - ce script s'exécutera en local sur les machines à sauvegarder
+	- il s'exécute à intervalles de temps réguliers
+	- il envoie les données à sauvegarder sur le serveur NFS
+	- du point de vue du script, c'est un dossier local. Mais en réalité, ce dossier est monté en NFS.
+
+
+
+
+
+## **2. Partage NFS**
+
+#### **🌞 Setup environnement**
 
 - **Créer un dossier `/srv/backup/`**
+    ```
+    [yrlan@backup ~]$ sudo mkdir /srv/backup/
+    ```
 - **Il contiendra un sous-dossier ppour chaque machine du parc**
     - **Commencez donc par créer le dossier `/srv/backup/web.tp2.linux/`**
     ```
     [yrlan@backup ~]$ sudo mkdir -p /srv/backup/web.tp2.linux/
     ```
-    
 - **Il existera un partage NFS pour chaque machine (principe du moindre privilège)**
-
+    ```
+    [yrlan@backup ~]$ sudo mkdir -p /srv/backup/db.tp2.linux/
+    ```
 
 #### **🌞 Setup partage NFS**
 
 - **Je crois que vous commencez à connaître la chanson... Google "nfs server rocky linux"**
-  - [ce lien me semble être particulièrement simple et concis](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=1)
-```
+    - [ce lien me semble être particulièrement simple et concis](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=1)
+```bash
+# Installer les nfs-utils
+# On indique le domaine ( a faire aussi sur web / db )
 [yrlan@backup ~]$ sudo dnf install -y nfs-utils
 [yrlan@backup ~]$ sudo vi /etc/idmapd.conf
 [yrlan@backup ~]$ sudo cat /etc/idmapd.conf | grep Domain
 Domain = tp2.linux
 
+# On indique les dossier à exporter avec l'IP qui correspond à la VM
+# Permettre l'accès aux dossiers de la machine backup a des machines du réseau
 [yrlan@backup ~]$ sudo vi /etc/exports
 [yrlan@backup ~]$ sudo cat /etc/exports
 /srv/backup/web.tp2.linux 10.102.1.11/24(rw,no_root_squash)
+/srv/backup/db.tp2.linux 10.102.1.12/24(rw,no_root_squash)
 
+# On autorise le services nfs (ports 111 et 2049)
 [yrlan@backup backup]$ sudo firewall-cmd --add-service=nfs --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
 success
 success
@@ -228,31 +267,32 @@ public (active)
 
 #### **🌞 Setup points de montage sur `web.tp2.linux`**
 
-- [sur le même site, y'a ça](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=2)
+- **[Sur le même site, y'a ça](https://www.server-world.info/en/note?os=Rocky_Linux_8&p=nfs&f=2)**
+    ```bash
+    [yrlan@web ~]$ sudo dnf -y install nfs-utils
+    [yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
+    Domain = tp2.linux
+    ```
 - **Monter le dossier `/srv/backups/web.tp2.linux` du serveur NFS dans le dossier `/srv/backup/` du serveur Web**
-```
-[yrlan@web ~]$ sudo dnf -y install nfs-utils
-[yrlan@web ~]$ sudo cat /etc/idmapd.conf | grep Domain
-Domain = tp2.linux
-[yrlan@web ~]$ sudo mkdir /srv/backup
-[yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
-```
-
+    ```bash
+    [yrlan@web ~]$ sudo mkdir /srv/backup
+    [yrlan@web ~]$ sudo mount -t nfs backup.tp2.linux:/srv/backup/web.tp2.linux /srv/backup
+    ```
 - **Vérifier...**
     - **Avec une commande `mount` que la partition est bien montée**
-    ```
+    ```bash
     [yrlan@web ~]$ sudo mount | grep backup
     backup.tp2.linux:/srv/backup/web.tp2.linux on /srv/backup type nfs4 (rw,relatime,vers=4.2,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.102.1.11,local_lock=none,addr=10.102.1.13)
     ```
 
-    - Avec une commande `df -h` qu'il reste de la place
-    ```
+    - **Avec une commande `df -h` qu'il reste de la place**
+    ```bash
     [yrlan@web ~]$ sudo df -h | grep backup
     backup.tp2.linux:/srv/backup/web.tp2.linux  6.2G  2.2G  4.1G  35% /srv/backup
     ```
 
     - **Avec une commande `touch` que vous avez le droit d'écrire dans cette partition**
-    ```
+    ```bash
     # Création d'un fichier `testttt` dans /srv/backup
     [yrlan@web ~]$ sudo touch /srv/backup/testttt
     [yrlan@web ~]$ sudo ls -l /srv/backup/
@@ -957,7 +997,7 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
 🌞 **Restreindre l'accès à la base de données `db.tp2.linux`**
 
 - **Seul le serveur Web doit pouvoir joindre la base de données sur le port 3306/tcp**
-    ```
+    ```bash
     [yrlan@db ~]$ sudo firewall-cmd --set-default-zone=drop
     sucess
     [yrlan@db ~]$ sudo firewall-cmd --new-zone=db --permanent; sudo firewall-cmd --zone=db --add-source=10.102.1.11/32 --permanent-; sudo firewall-cmd --zone=db --add-port=3306/tcp --permanent; sudo firewall-cmd --reload; 
@@ -967,7 +1007,7 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
     success
     ```
 - **Vous devez aussi autoriser votre accès SSH**
-    ```
+    ```bash
     sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
     success
     success
@@ -977,7 +1017,7 @@ $ sudo firewall-cmd --zone=ssh --add-port=22/tcp # uniquement le trafic qui vien
 - **N'hésitez pas à multiplier les zones (une zone `ssh` et une zone `db` par exemple)**
 
 #### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
-```
+```bash
 [yrlan@db ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all; sudo firewall-cmd --list-all --zone=db;sudo firewall-cmd --list-all --zone=ssh
 drop
 db
@@ -1032,7 +1072,7 @@ ssh (active)
 #### **🌞 Restreindre l'accès au serveur Web `web.tp2.linux`**
 
 - **seul le reverse proxy `front.tp2.linux` doit accéder au serveur web sur le port 80**
-    ```
+    ```bash
     [yrlan@web ~]$ sudo firewall-cmd --set-default-zone=drop
     [yrlan@web ~]$ sudo firewall-cmd --new-zone=web --permanent; sudo firewall-cmd --zone=web --add-source=10.102.1.14/32 --permanent; sudo firewall-cmd --zone=web --add-port=80/tcp --permanent; sudo firewall-cmd --reload;
     success
@@ -1041,7 +1081,7 @@ ssh (active)
     success
     ```
 - **n'oubliez pas votre accès SSH**
-    ```
+    ```bash
     [yrlan@web ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
     success
     success
@@ -1050,7 +1090,7 @@ ssh (active)
     ```
 
 #### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
-```
+```bash
 [yrlan@web ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all; sudo firewall-cmd --list-all --zone=web;sudo firewall-cmd --list-all --zone=ssh
 [sudo] password for yrlan:
 drop
@@ -1106,16 +1146,16 @@ ssh (active)
 #### **🌞 Restreindre l'accès au serveur de backup `backup.tp2.linux`**
 
 - **Seules les machines qui effectuent des backups doivent être autorisées à contacter le serveur de backup *via* NFS**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo firewall-cmd --set-default-zone=drop
-    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=backups --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.11/3224 --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.12/32 --permanent; sudo firewall-cmd --zone=backups --add-service=nfs --permanent; sudo firewall-cmd --reload;
+    [yrlan@backup ~]$ sudo firewall-cmd --new-zone=backups --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.11/32 --permanent; sudo firewall-cmd --zone=backups --add-source=10.102.1.12/32 --permanent; sudo firewall-cmd --zone=backups --add-service=nfs --permanent; sudo firewall-cmd --reload;
     success
     success
     success
     success
     ```
 - **N'oubliez pas votre accès SSH**
-    ```
+    ```bash
     [yrlan@backup ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
     success
     success
@@ -1124,7 +1164,7 @@ ssh (active)
     ```
 
 #### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
-```
+```bash
 [yrlan@backup ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all --zone=drop; sudo firewall-cmd --list-all --zone=backups; sudo firewall-cmd --list-all --zone=ssh
 drop
 
@@ -1182,16 +1222,17 @@ ssh (active)
 #### **🌞 Restreindre l'accès au reverse proxy `front.tp2.linux`**
 
 - **Seules les machines du réseau `10.102.1.0/24` doivent pouvoir joindre le proxy**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo firewall-cmd --new-zone=proxy --permanent; sudo firewall-cmd --zone=proxy --add-source=10.102.1.0/24 --permanent; sudo firewall-cmd --zone=proxy --add-port=443/tcp --permanent; sudo firewall-cmd --reload;
     [sudo] password for yrlan:
     success
     success
     success
     success
+    [yrlan@front ~]$ sudo firewall-cmd --zone=proxy --set
     ```
 - **N'oubliez pas votre accès SSH**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo firewall-cmd --new-zone=ssh --permanent; sudo firewall-cmd --zone=ssh --add-source=10.102.1.1/32 --permanent; sudo firewall-cmd --zone=ssh --add-port=22/tcp --permanent; sudo firewall-cmd --reload;
     success
     success
@@ -1200,7 +1241,7 @@ ssh (active)
     ```
 
 #### **🌞 Montrez le résultat de votre conf avec une ou plusieurs commandes `firewall-cmd`**
-```
+```bash
 [yrlan@front ~]$ sudo firewall-cmd --get-default-zone; sudo firewall-cmd --get-active-zones; sudo firewall-cmd --list-all; sudo firewall-cmd --list-all --zone=proxy;sudo firewall-cmd --list-all --zone=ssh
 drop
 drop
