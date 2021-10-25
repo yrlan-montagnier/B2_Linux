@@ -715,11 +715,11 @@ A ce stade vous avez :
 #### **🌞 Installer NGINX**
 
 - **Vous devrez d'abord installer le paquet `epel-release` avant d'installer `nginx`**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo dnf install -y epel-release;sudo dnf install -y nginx
     ```
 - **Le fichier de conf principal de NGINX est `/etc/nginx/nginx.conf`**
-    ```
+    ```bash
     [yrlan@front ~]$ head -8 /etc/nginx/nginx.conf
     # For more information on configuration, see:
     #   * Official English Documentation: http://nginx.org/en/docs/
@@ -735,7 +735,7 @@ A ce stade vous avez :
 
 - **Lancer le *service* `nginx`**
 - **Le paramétrer pour qu'il démarre seul quand le système boot**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo systemctl start nginx
     [yrlan@front ~]$ sudo systemctl enable nginx
     Created symlink /etc/systemd/system/multi-user.target.wants/nginx.service → /usr/lib/systemd/system/nginx.service.
@@ -745,7 +745,7 @@ A ce stade vous avez :
     enabled
     ```
 - **Repérer le port qu'utilise NGINX par défaut, pour l'ouvrir dans le firewall**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo ss -alnpt | grep nginx
     LISTEN 0      128          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=4046,fd=8),("nginx",pid=4045,fd=8))
     LISTEN 0      128             [::]:80           [::]:*    users:(("nginx",pid=4046,fd=9),("nginx",pid=4045,fd=9))
@@ -769,7 +769,7 @@ A ce stade vous avez :
       rich rules:
     ```
 - **Vérifier que vous pouvez joindre NGINX avec une commande `curl` depuis votre PC**
-    ```
+    ```powershell
     PS C:\Users\yrlan> curl front.tp2.linux:80
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 
@@ -785,14 +785,14 @@ A ce stade vous avez :
 #### **🌞 Explorer la conf par défaut de NGINX**
 
 - **Repérez l'utilisateur qu'utilise NGINX par défaut**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo ps -ef | grep nginx
     root        4045       1  0 00:41 ?        00:00:00 nginx: master process /usr/sbin/nginx
     nginx       4046    4045  0 00:41 ?        00:00:00 nginx: worker process
     ```
 - **Dans la conf NGINX, on utilise le mot-clé `server` pour ajouter un nouveau site**
     - **Repérez le bloc `server {}` dans le fichier de conf principal**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo cat /etc/nginx/nginx.conf
     [...]
     server {
@@ -818,7 +818,7 @@ A ce stade vous avez :
     ```
 - **Par défaut, le fichier de conf principal inclut d'autres fichiers de conf**
     - **Mettez en évidence ces lignes d'inclusion dans le fichier de conf principal**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo cat /etc/nginx/nginx.conf | grep include
     include /usr/share/nginx/modules/*.conf;
         include             /etc/nginx/mime.types;
@@ -832,7 +832,7 @@ A ce stade vous avez :
 #### **🌞 Modifier la conf de NGINX**
 
 - **Pour que ça fonctionne, le fichier `/etc/hosts` de la machine DOIT être rempli correctement, conformément à la** **[📝**checklist**📝](#checklist)**
-    ```
+    ```bash
     [yrlan@front ~]$ cat /etc/hosts | grep 10.102.1.
     10.102.1.11 web.tp2.linux
     10.102.1.12 db.tp2.linux
@@ -920,7 +920,7 @@ A ce stade vous avez :
 ---
     
 - **Fichier final :**    
-    ```
+    ```bash
     [yrlan@front ~]$ sudo cat /etc/nginx/conf.d/web.tp2.linux.conf
     server {
             listen 443 ssl;
@@ -935,7 +935,7 @@ A ce stade vous avez :
     }
     ```
 - **n'oubliez pas d'ouvrir le port 443/tcp dans le firewall**
-    ```
+    ```bash
     [yrlan@front ~]$ sudo firewall-cmd --add-port=443/tcp --permanent; sudo firewall-cmd --remove-port=80/tcp --permanent; sudo firewall-cmd --reload; sudo firewall-cmd --list-all
     success
     success
